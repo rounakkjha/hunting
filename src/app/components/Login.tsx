@@ -4,11 +4,12 @@ import { Lock, User, Loader2, TrendingUp, Target, CheckCircle, Zap, ArrowRight, 
 interface LoginProps {
   onLogin: (username: string, password: string) => Promise<boolean>;
   onCheckUser: (username: string) => Promise<boolean>;
+  onTrial: () => void;
 }
 
 type Step = 'username' | 'password' | 'not_found';
 
-export default function Login({ onLogin, onCheckUser }: LoginProps) {
+export default function Login({ onLogin, onCheckUser, onTrial }: LoginProps) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -226,6 +227,23 @@ export default function Login({ onLogin, onCheckUser }: LoginProps) {
                     )}
                   </button>
                 </form>
+
+                {/* Trial button */}
+                <div className="mt-5 sm:mt-6">
+                  <div className="relative flex items-center gap-3 mb-4">
+                    <div className="flex-1 h-px bg-white/10 lg:bg-border/50" />
+                    <span className="text-[10px] sm:text-xs text-white/40 lg:text-muted-foreground uppercase tracking-wider font-medium">or</span>
+                    <div className="flex-1 h-px bg-white/10 lg:bg-border/50" />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={onTrial}
+                    className="w-full py-2.5 sm:py-3 px-4 rounded-xl border border-white/10 lg:border-border/60 text-white/70 lg:text-foreground/70 font-medium hover:bg-white/5 lg:hover:bg-background/80 hover:border-primary/30 transition-all flex items-center justify-center gap-2 text-sm"
+                  >
+                    <Zap className="w-4 h-4 text-amber-400" strokeWidth={2.5} />
+                    Try HuntLog — no sign up needed
+                  </button>
+                </div>
 
                 {/* Mobile: mini feature ticker */}
                 <div className="lg:hidden mt-6 pt-5 border-t border-white/10">

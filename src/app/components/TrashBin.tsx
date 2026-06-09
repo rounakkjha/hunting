@@ -38,8 +38,8 @@ export default function TrashBin({ items, onRestore, onDeletePermanently }: Tras
 
   return (
     <div className="relative group">
-      <div className="absolute -inset-0.5 bg-gradient-to-r from-red-500/20 to-red-600/20 rounded-3xl opacity-0 group-hover:opacity-100 blur transition duration-500" />
-      <div className="relative bg-card border border-border/50 rounded-3xl shadow-xl overflow-hidden backdrop-blur-sm">
+      <div className="absolute -inset-0.5 bg-gradient-to-r from-red-500/20 to-red-600/20 rounded-3xl opacity-0 group-hover:opacity-100 blur transition duration-500 hidden sm:block" />
+      <div className="relative bg-card border border-border/50 rounded-2xl sm:rounded-3xl shadow-xl overflow-hidden backdrop-blur-sm">
         <div className="border-b border-border/50 bg-gradient-to-r from-red-500/5 to-transparent px-4 py-4 sm:px-8 sm:py-6">
           <div className="flex items-center gap-3">
             <div className="p-3 bg-gradient-to-br from-red-500/10 to-red-600/5 rounded-2xl ring-1 ring-red-500/20">

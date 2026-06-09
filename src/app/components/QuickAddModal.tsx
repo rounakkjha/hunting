@@ -666,8 +666,8 @@ export default function QuickAddModal({ type, customFields = [], knownCompanies 
     <>
       <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center sm:p-6 z-50 animate-fade-in" onClick={onClose}>
         <div className="bg-gradient-to-br from-card to-card/50 rounded-t-2xl sm:rounded-2xl border border-border/60 shadow-2xl w-full sm:max-w-lg max-h-[85vh] sm:max-h-[90vh] overflow-hidden animate-scale-in" onClick={(e) => e.stopPropagation()}>
-          <div className="flex items-center justify-between px-6 py-5 border-b border-border/40">
-            <h3 className="text-lg">{titles[type]}</h3>
+          <div className="flex items-center justify-between px-4 sm:px-6 py-4 sm:py-5 border-b border-border/40">
+            <h3 className="text-base sm:text-lg font-semibold">{titles[type]}</h3>
             <button
               onClick={onClose}
               className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-lg transition-all"
@@ -676,7 +676,7 @@ export default function QuickAddModal({ type, customFields = [], knownCompanies 
             </button>
           </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-4 overflow-y-auto max-h-[calc(90vh-140px)]">
+        <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-3 sm:space-y-4 overflow-y-auto max-h-[calc(85vh-120px)] sm:max-h-[calc(90vh-140px)]">
           {renderForm() || <div className="text-center text-muted-foreground">Form not available</div>}
 
           {(type === 'application' || type === 'coldEmail') && (

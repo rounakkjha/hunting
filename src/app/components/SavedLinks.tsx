@@ -35,8 +35,8 @@ export default function SavedLinks({ links, onAdd, onDelete }: SavedLinksProps) 
 
   return (
     <div className="relative group">
-      <div className="absolute -inset-0.5 bg-gradient-to-r from-indigo-500/20 to-indigo-600/20 rounded-3xl opacity-0 group-hover:opacity-100 blur transition duration-500" />
-      <div className="relative bg-card border border-border/50 rounded-3xl shadow-xl overflow-hidden backdrop-blur-sm">
+      <div className="absolute -inset-0.5 bg-gradient-to-r from-indigo-500/20 to-indigo-600/20 rounded-3xl opacity-0 group-hover:opacity-100 blur transition duration-500 hidden sm:block" />
+      <div className="relative bg-card border border-border/50 rounded-2xl sm:rounded-3xl shadow-xl overflow-hidden backdrop-blur-sm">
         <div className="border-b border-border/50 bg-gradient-to-r from-indigo-500/5 to-transparent px-4 py-4 sm:px-8 sm:py-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -52,10 +52,10 @@ export default function SavedLinks({ links, onAdd, onDelete }: SavedLinksProps) 
             </div>
             <button
               onClick={() => setShowForm(!showForm)}
-              className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-primary to-accent text-white rounded-xl text-sm hover:shadow-lg hover:shadow-primary/25 transition-all"
+              className="flex items-center gap-1.5 sm:gap-2 p-2 sm:px-4 sm:py-2 bg-gradient-to-r from-primary to-accent text-white rounded-lg sm:rounded-xl text-sm hover:shadow-lg hover:shadow-primary/25 transition-all"
             >
               <Plus className="w-4 h-4" strokeWidth={2.5} />
-              Add Link
+              <span className="hidden sm:inline">Add Link</span>
             </button>
           </div>
         </div>
@@ -149,7 +149,7 @@ export default function SavedLinks({ links, onAdd, onDelete }: SavedLinksProps) 
                     </a>
                     <button
                       onClick={() => onDelete(link.id)}
-                      className="opacity-0 group-hover/link:opacity-100 p-2 text-red-400 hover:bg-red-500/10 rounded-lg border border-transparent hover:border-red-500/20 transition-all"
+                      className="sm:opacity-0 sm:group-hover/link:opacity-100 p-2 text-red-400 hover:bg-red-500/10 rounded-lg border border-transparent hover:border-red-500/20 transition-all"
                       title="Delete"
                     >
                       <Trash2 className="w-4 h-4" strokeWidth={2.5} />

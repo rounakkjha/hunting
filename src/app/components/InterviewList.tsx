@@ -254,17 +254,17 @@ export default function InterviewList({ interviews, onAdd, onOpenAddModal, onEdi
 
   return (
     <div className="relative group">
-      <div className="absolute -inset-0.5 bg-gradient-to-r from-purple-500/20 to-purple-600/20 rounded-3xl opacity-0 group-hover:opacity-100 blur transition duration-500" />
-      <div className="relative bg-card border border-border/50 rounded-3xl shadow-xl overflow-hidden backdrop-blur-sm">
+      <div className="absolute -inset-0.5 bg-gradient-to-r from-purple-500/20 to-purple-600/20 rounded-3xl opacity-0 group-hover:opacity-100 blur transition duration-500 hidden sm:block" />
+      <div className="relative bg-card border border-border/50 rounded-2xl sm:rounded-3xl shadow-xl overflow-hidden backdrop-blur-sm">
         <div className="border-b border-border/50 bg-gradient-to-r from-purple-500/5 to-transparent px-4 py-4 sm:px-8 sm:py-6">
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-3">
-              <div className="p-3 bg-gradient-to-br from-purple-500/10 to-purple-600/5 rounded-2xl ring-1 ring-purple-500/20">
-                <Briefcase className="w-5 h-5 text-purple-500" strokeWidth={2.5} />
+              <div className="p-2.5 sm:p-3 bg-gradient-to-br from-purple-500/10 to-purple-600/5 rounded-xl sm:rounded-2xl ring-1 ring-purple-500/20">
+                <Briefcase className="w-4 sm:w-5 h-4 sm:h-5 text-purple-500" strokeWidth={2.5} />
               </div>
               <div>
-                <h3 className="text-xl font-bold">Interviews</h3>
-                <p className="text-sm text-muted-foreground mt-1">
+                <h3 className="text-base sm:text-xl font-bold">Interviews</h3>
+                <p className="text-xs sm:text-sm text-muted-foreground">
                   {activeInterviews.length} active, {completedInterviews.length} completed
                 </p>
               </div>
@@ -272,18 +272,18 @@ export default function InterviewList({ interviews, onAdd, onOpenAddModal, onEdi
             {onOpenAddModal && (
               <button
                 onClick={onOpenAddModal}
-                className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-primary to-accent text-white rounded-xl shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/40 transition-all duration-300 hover:scale-105"
+                className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 bg-gradient-to-r from-primary to-accent text-white rounded-lg sm:rounded-xl shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/40 transition-all duration-300 hover:scale-105 text-xs sm:text-sm"
               >
-                <Plus className="w-4 h-4" strokeWidth={2.5} />
+                <Plus className="w-3.5 sm:w-4 h-3.5 sm:h-4" strokeWidth={2.5} />
                 Add Interview
               </button>
             )}
           </div>
         </div>
 
-        <div className="p-6">
+        <div className="p-3 sm:p-6">
           {interviews.length === 0 ? (
-            <div className="text-center py-16">
+            <div className="text-center py-10 sm:py-16">
               <div className="w-20 h-20 mx-auto mb-4 rounded-3xl bg-gradient-to-br from-purple-500/10 to-purple-600/5 flex items-center justify-center ring-1 ring-purple-500/20">
                 <Briefcase className="w-10 h-10 text-purple-500/50" strokeWidth={2.5} />
               </div>

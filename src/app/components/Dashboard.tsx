@@ -50,6 +50,7 @@ interface DashboardProps {
   setUserData: (data: UserData | ((prev: UserData) => UserData)) => void;
   onLogout: () => void;
   currentUser: User | null;
+  isTrial?: boolean;
 }
 
 type ModalType = 'application' | 'coldEmail' | 'linkedin' | 'content' | 'interview' | null;
@@ -152,7 +153,7 @@ const collectionKeyMap: Record<string, string> = {
     interview: 'interviews',
   };
 
-export default function Dashboard({ userData, setUserData, onLogout, currentUser }: DashboardProps) {
+export default function Dashboard({ userData, setUserData, onLogout, currentUser, isTrial }: DashboardProps) {
   const [activeSection, setActiveSection] = useState('dashboard');
   const [activeModal, setActiveModal] = useState<ModalType>(null);
   const [editingEntry, setEditingEntry] = useState<any>(null);
@@ -445,7 +446,7 @@ export default function Dashboard({ userData, setUserData, onLogout, currentUser
                 </div>
               ) : (
                 /* Returning user with data */
-                <div className="space-y-5">
+                <div className="space-y-3">
                   {/* Quick action grid */}
                   <div className="grid grid-cols-4 gap-2">
                     {quickActions.slice(0, 4).map((action) => (
@@ -480,15 +481,15 @@ export default function Dashboard({ userData, setUserData, onLogout, currentUser
 
       case 'applications':
         return (
-          <div className="space-y-6">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <h2 className="text-2xl sm:text-3xl font-bold">Job Applications</h2>
+          <div className="space-y-4 sm:space-y-6">
+            <div className="flex items-center justify-between gap-2 sm:gap-3">
+              <h2 className="text-xl sm:text-3xl font-bold">Job Applications</h2>
               <button
                 onClick={() => setActiveModal('application')}
-                className="flex items-center gap-2 px-4 py-2.5 sm:px-5 sm:py-3 bg-gradient-to-r from-primary to-accent text-white rounded-2xl shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/40 transition-all duration-300 hover:scale-105 text-sm sm:text-base w-fit"
+                className="flex items-center gap-2 p-2.5 sm:px-5 sm:py-3 bg-gradient-to-r from-primary to-accent text-white rounded-xl sm:rounded-2xl shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/40 transition-all duration-300 hover:scale-105 text-sm sm:text-base"
               >
                 <Plus className="w-5 h-5" strokeWidth={2.5} />
-                Add Application
+                <span className="hidden sm:inline">Add Application</span>
               </button>
             </div>
             <DateFilter dateRange={dateRange} onDateRangeChange={setDateRange} />
@@ -607,15 +608,15 @@ export default function Dashboard({ userData, setUserData, onLogout, currentUser
 
       case 'emails':
         return (
-          <div className="space-y-6">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <h2 className="text-2xl sm:text-3xl font-bold">Cold Emails</h2>
+          <div className="space-y-4 sm:space-y-6">
+            <div className="flex items-center justify-between gap-2 sm:gap-3">
+              <h2 className="text-xl sm:text-3xl font-bold">Cold Emails</h2>
               <button
                 onClick={() => setActiveModal('coldEmail')}
-                className="flex items-center gap-2 px-4 py-2.5 sm:px-5 sm:py-3 bg-gradient-to-r from-primary to-accent text-white rounded-2xl shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/40 transition-all duration-300 hover:scale-105 text-sm sm:text-base w-fit"
+                className="flex items-center gap-2 p-2.5 sm:px-5 sm:py-3 bg-gradient-to-r from-primary to-accent text-white rounded-xl sm:rounded-2xl shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/40 transition-all duration-300 hover:scale-105 text-sm sm:text-base"
               >
                 <Plus className="w-5 h-5" strokeWidth={2.5} />
-                Add Cold Email
+                <span className="hidden sm:inline">Add Cold Email</span>
               </button>
             </div>
             <DateFilter dateRange={dateRange} onDateRangeChange={setDateRange} />
@@ -652,15 +653,15 @@ export default function Dashboard({ userData, setUserData, onLogout, currentUser
 
       case 'linkedin':
         return (
-          <div className="space-y-6">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <h2 className="text-2xl sm:text-3xl font-bold">LinkedIn Outreach</h2>
+          <div className="space-y-4 sm:space-y-6">
+            <div className="flex items-center justify-between gap-2 sm:gap-3">
+              <h2 className="text-xl sm:text-3xl font-bold">LinkedIn Outreach</h2>
               <button
                 onClick={() => setActiveModal('linkedin')}
-                className="flex items-center gap-2 px-4 py-2.5 sm:px-5 sm:py-3 bg-gradient-to-r from-primary to-accent text-white rounded-2xl shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/40 transition-all duration-300 hover:scale-105 text-sm sm:text-base w-fit"
+                className="flex items-center gap-2 p-2.5 sm:px-5 sm:py-3 bg-gradient-to-r from-primary to-accent text-white rounded-xl sm:rounded-2xl shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/40 transition-all duration-300 hover:scale-105 text-sm sm:text-base"
               >
                 <Plus className="w-5 h-5" strokeWidth={2.5} />
-                Add Outreach
+                <span className="hidden sm:inline">Add Outreach</span>
               </button>
             </div>
             <DateFilter dateRange={dateRange} onDateRangeChange={setDateRange} />
@@ -844,15 +845,15 @@ export default function Dashboard({ userData, setUserData, onLogout, currentUser
 
       case 'content':
         return (
-          <div className="space-y-6">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <h2 className="text-2xl sm:text-3xl font-bold">Content Library</h2>
+          <div className="space-y-4 sm:space-y-6">
+            <div className="flex items-center justify-between gap-2 sm:gap-3">
+              <h2 className="text-xl sm:text-3xl font-bold">Content Library</h2>
               <button
                 onClick={() => setActiveModal('content')}
-                className="flex items-center gap-2 px-4 py-2.5 sm:px-5 sm:py-3 bg-gradient-to-r from-primary to-accent text-white rounded-2xl shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/40 transition-all duration-300 hover:scale-105 text-sm sm:text-base w-fit"
+                className="flex items-center gap-2 p-2.5 sm:px-5 sm:py-3 bg-gradient-to-r from-primary to-accent text-white rounded-xl sm:rounded-2xl shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/40 transition-all duration-300 hover:scale-105 text-sm sm:text-base"
               >
                 <Plus className="w-5 h-5" strokeWidth={2.5} />
-                Add Content
+                <span className="hidden sm:inline">Add Content</span>
               </button>
             </div>
             <ContentLibrary
@@ -1011,8 +1012,8 @@ export default function Dashboard({ userData, setUserData, onLogout, currentUser
 
       case 'links':
         return (
-          <div className="space-y-6">
-            <h2 className="text-2xl sm:text-3xl font-bold">Quick Links</h2>
+          <div className="space-y-4 sm:space-y-6">
+            <h2 className="text-xl sm:text-3xl font-bold">Quick Links</h2>
             <SavedLinks
               links={userData.savedLinks}
               onAdd={({ name, url }) => {
@@ -1102,7 +1103,7 @@ export default function Dashboard({ userData, setUserData, onLogout, currentUser
           </div>
         </div>
 
-        <div className="max-w-[1600px] mx-auto px-4 py-6 sm:px-6 sm:py-8 lg:p-10 animate-fade-in-up" key={activeSection}>
+        <div className="max-w-[1600px] mx-auto px-3 py-4 sm:px-6 sm:py-8 lg:p-10 animate-fade-in-up" key={activeSection}>
           {renderContent()}
         </div>
       </main>
@@ -1217,6 +1218,11 @@ export default function Dashboard({ userData, setUserData, onLogout, currentUser
                 interview: quirkyToasts.addApplication,
               };
               showToast(randomPick(modalToastMap[activeModal] || ['✅ Entry added!']));
+              if (isTrial) {
+                setTimeout(() => {
+                  showToast('⚠️ This is a temporary account, data would be erased.');
+                }, 1200);
+              }
             }
             setActiveModal(null);
             setEditingEntry(null);

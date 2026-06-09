@@ -60,33 +60,33 @@ export default function TodoList({ todos, onAdd, onToggle, onDelete, onUpdatePri
 
   return (
     <div className="relative group">
-      <div className="absolute -inset-0.5 bg-gradient-to-r from-indigo-500/20 to-indigo-600/20 rounded-3xl opacity-0 group-hover:opacity-100 blur transition duration-500" />
-      <div className="relative bg-card border border-border/50 rounded-3xl shadow-xl overflow-hidden backdrop-blur-sm">
+      <div className="absolute -inset-0.5 bg-gradient-to-r from-indigo-500/20 to-indigo-600/20 rounded-3xl opacity-0 group-hover:opacity-100 blur transition duration-500 hidden sm:block" />
+      <div className="relative bg-card border border-border/50 rounded-2xl sm:rounded-3xl shadow-xl overflow-hidden backdrop-blur-sm">
         <div className="border-b border-border/50 bg-gradient-to-r from-indigo-500/5 to-transparent px-4 py-4 sm:px-8 sm:py-6">
           <div className="flex items-center gap-3">
-            <div className="p-3 bg-gradient-to-br from-indigo-500/10 to-indigo-600/5 rounded-2xl ring-1 ring-indigo-500/20">
-              <CheckSquare className="w-5 h-5 text-indigo-500" strokeWidth={2.5} />
+            <div className="p-2.5 sm:p-3 bg-gradient-to-br from-indigo-500/10 to-indigo-600/5 rounded-xl sm:rounded-2xl ring-1 ring-indigo-500/20">
+              <CheckSquare className="w-4 sm:w-5 h-4 sm:h-5 text-indigo-500" strokeWidth={2.5} />
             </div>
             <div>
-              <h3 className="text-xl font-bold">To-Do List</h3>
-              <p className="text-sm text-muted-foreground mt-1">
+              <h3 className="text-base sm:text-xl font-bold">To-Do List</h3>
+              <p className="text-xs sm:text-sm text-muted-foreground">
                 {todos.filter((t) => !t.completed).length} active task{todos.filter((t) => !t.completed).length !== 1 ? 's' : ''}
               </p>
             </div>
           </div>
         </div>
 
-        <div className="p-6">
-          <form onSubmit={handleSubmit} className="mb-6">
-            <div className="flex gap-2">
+        <div className="p-3 sm:p-6">
+          <form onSubmit={handleSubmit} className="mb-4 sm:mb-6">
+            <div className="flex flex-col sm:flex-row gap-2">
               <input
                 type="text"
                 value={newTodo}
                 onChange={(e) => setNewTodo(e.target.value)}
                 placeholder="Add a new task..."
-                className="flex-1 px-4 py-3 bg-background/50 backdrop-blur-sm rounded-2xl border border-border/60 focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none transition-all text-sm placeholder:text-muted-foreground/50 font-medium"
+                className="flex-1 px-3.5 sm:px-4 py-2.5 sm:py-3 bg-background/50 backdrop-blur-sm rounded-xl sm:rounded-2xl border border-border/60 focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none transition-all text-sm placeholder:text-muted-foreground/50 font-medium"
               />
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-1.5 sm:gap-1">
                 {PRIORITY_ORDER.map((p) => {
                   const cfg = PRIORITY_CONFIG[p];
                   const isSelected = newPriority === p;
@@ -95,30 +95,30 @@ export default function TodoList({ todos, onAdd, onToggle, onDelete, onUpdatePri
                       key={p}
                       type="button"
                       onClick={() => setNewPriority(p)}
-                      className={`px-3 py-3 rounded-2xl border text-xs font-semibold transition-all duration-200 ${cfg.color} ${
+                      className={`px-2.5 sm:px-3 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl border text-xs font-semibold transition-all duration-200 ${cfg.color} ${
                         isSelected
                           ? `${cfg.bg} ${cfg.border} ring-2 ${cfg.ring} scale-105`
                           : 'border-border/40 opacity-40 hover:opacity-70'
                       }`}
                       title={`${cfg.label} priority`}
                     >
-                      <Flag className="w-4 h-4" strokeWidth={2.5} />
+                      <Flag className="w-3.5 sm:w-4 h-3.5 sm:h-4" strokeWidth={2.5} />
                     </button>
                   );
                 })}
+                <button
+                  type="submit"
+                  className="relative group/btn overflow-hidden px-4 sm:px-5 py-2.5 sm:py-3 bg-gradient-to-r from-primary to-accent text-white rounded-xl sm:rounded-2xl shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/40 transition-all duration-300 hover:scale-105 ml-auto sm:ml-0"
+                >
+                  <Plus className="w-4 sm:w-5 h-4 sm:h-5" strokeWidth={2.5} />
+                  <div className="absolute inset-0 bg-gradient-to-r from-accent to-primary opacity-0 group-hover/btn:opacity-100 transition-opacity duration-300" />
+                </button>
               </div>
-              <button
-                type="submit"
-                className="relative group/btn overflow-hidden px-5 py-3 bg-gradient-to-r from-primary to-accent text-white rounded-2xl shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/40 transition-all duration-300 hover:scale-105"
-              >
-                <Plus className="w-5 h-5" strokeWidth={2.5} />
-                <div className="absolute inset-0 bg-gradient-to-r from-accent to-primary opacity-0 group-hover/btn:opacity-100 transition-opacity duration-300" />
-              </button>
             </div>
           </form>
 
           {todos.length === 0 ? (
-            <div className="text-center py-16">
+            <div className="text-center py-10 sm:py-16">
               <div className="w-20 h-20 mx-auto mb-4 rounded-3xl bg-gradient-to-br from-indigo-500/10 to-indigo-600/5 flex items-center justify-center ring-1 ring-indigo-500/20">
                 <Sparkles className="w-10 h-10 text-indigo-500/50" />
               </div>
@@ -138,7 +138,7 @@ export default function TodoList({ todos, onAdd, onToggle, onDelete, onUpdatePri
                   style={{ animationDelay: `${index * 30}ms` }}
                 >
                   <div className="absolute inset-0 bg-gradient-to-r from-primary/5 to-transparent opacity-0 group-hover/item:opacity-100 transition-opacity duration-300" />
-                  <div className="relative flex items-start gap-4 p-4">
+                  <div className="relative flex items-start gap-2.5 sm:gap-4 p-3 sm:p-4">
                     <input
                       type="checkbox"
                       checked={todo.completed}
@@ -244,18 +244,18 @@ export default function TodoList({ todos, onAdd, onToggle, onDelete, onUpdatePri
                       {!todo.completed && editingId !== todo.id && (
                         <button
                           onClick={() => startEdit(todo)}
-                          className="opacity-0 group-hover/item:opacity-100 p-2 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-xl border border-transparent hover:border-primary/20 transition-all"
+                          className="sm:opacity-0 sm:group-hover/item:opacity-100 p-1.5 sm:p-2 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-lg sm:rounded-xl border border-transparent hover:border-primary/20 transition-all"
                           title="Edit"
                         >
-                          <Pencil className="w-4 h-4" strokeWidth={2.5} />
+                          <Pencil className="w-3.5 sm:w-4 h-3.5 sm:h-4" strokeWidth={2.5} />
                         </button>
                       )}
                       <button
                         onClick={() => onDelete(todo.id)}
-                        className="opacity-0 group-hover/item:opacity-100 p-2 text-red-400 hover:bg-red-500/10 rounded-xl border border-transparent hover:border-red-500/20 transition-all"
+                        className="sm:opacity-0 sm:group-hover/item:opacity-100 p-1.5 sm:p-2 text-red-400 hover:bg-red-500/10 rounded-lg sm:rounded-xl border border-transparent hover:border-red-500/20 transition-all"
                         title="Delete"
                       >
-                        <Trash2 className="w-4 h-4" strokeWidth={2.5} />
+                        <Trash2 className="w-3.5 sm:w-4 h-3.5 sm:h-4" strokeWidth={2.5} />
                       </button>
                     </div>
                   </div>

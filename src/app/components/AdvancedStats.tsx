@@ -112,7 +112,7 @@ export default function AdvancedStats({ userData }: AdvancedStatsProps) {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         {/* Response Rate */}
         <div className="relative group">
-          <div className="absolute -inset-0.5 bg-gradient-to-r from-indigo-500/20 to-indigo-400/20 rounded-2xl opacity-0 group-hover:opacity-100 blur transition duration-500" />
+          <div className="absolute -inset-0.5 bg-gradient-to-r from-indigo-500/20 to-indigo-400/20 rounded-2xl opacity-0 group-hover:opacity-100 blur transition duration-500 hidden sm:block" />
           <div className="relative bg-card border border-border/50 rounded-2xl shadow-lg overflow-hidden backdrop-blur-sm p-3.5 sm:p-5">
             <div className="flex items-center justify-between mb-2 sm:mb-3">
               <div className="p-2 sm:p-2.5 bg-indigo-500/10 rounded-xl ring-1 ring-indigo-500/20">
@@ -142,7 +142,7 @@ export default function AdvancedStats({ userData }: AdvancedStatsProps) {
 
         {/* Todo Completion */}
         <div className="relative group">
-          <div className="absolute -inset-0.5 bg-gradient-to-r from-indigo-400/20 to-indigo-300/20 rounded-2xl opacity-0 group-hover:opacity-100 blur transition duration-500" />
+          <div className="absolute -inset-0.5 bg-gradient-to-r from-indigo-400/20 to-indigo-300/20 rounded-2xl opacity-0 group-hover:opacity-100 blur transition duration-500 hidden sm:block" />
           <div className="relative bg-card border border-border/50 rounded-2xl shadow-lg overflow-hidden backdrop-blur-sm p-3.5 sm:p-5">
             <div className="flex items-center justify-between mb-2 sm:mb-3">
               <div className="p-2 sm:p-2.5 bg-indigo-400/10 rounded-xl ring-1 ring-indigo-400/20">
@@ -172,7 +172,7 @@ export default function AdvancedStats({ userData }: AdvancedStatsProps) {
 
         {/* Activity Streak */}
         <div className="relative group">
-          <div className="absolute -inset-0.5 bg-gradient-to-r from-indigo-600/20 to-indigo-500/20 rounded-2xl opacity-0 group-hover:opacity-100 blur transition duration-500" />
+          <div className="absolute -inset-0.5 bg-gradient-to-r from-indigo-600/20 to-indigo-500/20 rounded-2xl opacity-0 group-hover:opacity-100 blur transition duration-500 hidden sm:block" />
           <div className="relative bg-card border border-border/50 rounded-2xl shadow-lg overflow-hidden backdrop-blur-sm p-3.5 sm:p-5">
             <div className="flex items-center justify-between mb-2 sm:mb-3">
               <div className="p-2 sm:p-2.5 bg-indigo-600/10 rounded-xl ring-1 ring-indigo-600/20">
@@ -233,8 +233,8 @@ export default function AdvancedStats({ userData }: AdvancedStatsProps) {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Weekly Activity Chart */}
         <div className="lg:col-span-2 relative group">
-          <div className="absolute -inset-0.5 bg-gradient-to-r from-primary/20 to-accent/20 rounded-3xl opacity-0 group-hover:opacity-100 blur transition duration-500" />
-          <div className="relative bg-card border border-border/50 rounded-3xl shadow-xl overflow-hidden backdrop-blur-sm p-4 sm:p-6 lg:p-8">
+          <div className="absolute -inset-0.5 bg-gradient-to-r from-primary/20 to-accent/20 rounded-3xl opacity-0 group-hover:opacity-100 blur transition duration-500 hidden sm:block" />
+          <div className="relative bg-card border border-border/50 rounded-2xl sm:rounded-3xl shadow-xl overflow-hidden backdrop-blur-sm p-4 sm:p-6 lg:p-8">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
               <div>
                 <h3 className="text-lg sm:text-xl font-bold">Weekly Activity</h3>
@@ -302,8 +302,8 @@ export default function AdvancedStats({ userData }: AdvancedStatsProps) {
 
         {/* Activity Distribution */}
         <div className="relative group">
-          <div className="absolute -inset-0.5 bg-gradient-to-r from-indigo-500/20 to-indigo-400/20 rounded-3xl opacity-0 group-hover:opacity-100 blur transition duration-500" />
-          <div className="relative bg-card border border-border/50 rounded-3xl shadow-xl overflow-hidden backdrop-blur-sm p-4 sm:p-6">
+          <div className="absolute -inset-0.5 bg-gradient-to-r from-indigo-500/20 to-indigo-400/20 rounded-3xl opacity-0 group-hover:opacity-100 blur transition duration-500 hidden sm:block" />
+          <div className="relative bg-card border border-border/50 rounded-2xl sm:rounded-3xl shadow-xl overflow-hidden backdrop-blur-sm p-4 sm:p-6">
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-3">
                 <div className="p-2.5 bg-indigo-500/10 rounded-xl ring-1 ring-indigo-500/20">

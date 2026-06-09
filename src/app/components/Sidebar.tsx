@@ -147,29 +147,30 @@ export default function Sidebar({ activeSection, setActiveSection, onLogout, onC
       mobileOpen ? 'animate-slide-in-left' : 'animate-slide-in-left'
     }`}>
       {/* Logo */}
-      <div className="p-6 border-b border-border/50">
+      <div className="px-5 py-4 border-b border-border/50">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="relative group">
               <div className="absolute -inset-1 bg-gradient-to-r from-primary to-accent rounded-2xl opacity-75 group-hover:opacity-100 blur transition duration-300" />
-              <div className="relative w-12 h-12 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center shadow-lg">
-                <Target className="w-6 h-6 text-white" strokeWidth={2.5} />
+              <div className="relative w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center shadow-lg">
+                <Target className="w-5 h-5 text-white" strokeWidth={2.5} />
               </div>
             </div>
             <div>
-              <h1 className="text-xl font-bold">HuntLog</h1>
-              <p className="text-xs text-muted-foreground flex items-center gap-1">
+              <h1 className="text-lg font-bold">HuntLog</h1>
+              <p className="text-[10px] text-muted-foreground flex items-center gap-1">
                 <Sparkles className="w-3 h-3" />
                 Job Hunt Tracker
               </p>
             </div>
           </div>
+          {/* Desktop: collapse button | Mobile: close button */}
           <button
-            onClick={onToggleCollapse}
+            onClick={mobileOpen ? onMobileClose : onToggleCollapse}
             className="p-2 rounded-lg hover:bg-primary/10 text-muted-foreground hover:text-primary transition-all"
-            title="Collapse sidebar"
+            title={mobileOpen ? 'Close menu' : 'Collapse sidebar'}
           >
-            <PanelLeftClose className="w-4 h-4" strokeWidth={2} />
+            {mobileOpen ? <X className="w-4 h-4" strokeWidth={2.5} /> : <PanelLeftClose className="w-4 h-4" strokeWidth={2} />}
           </button>
         </div>
       </div>
@@ -206,12 +207,8 @@ export default function Sidebar({ activeSection, setActiveSection, onLogout, onC
       </nav>
 
       {/* Bottom Section */}
-      <div className="p-4 border-t border-border/50 space-y-3">
-        <div className="flex items-center justify-end px-2">
-          <ThemeToggle />
-        </div>
-
-        <div className="flex items-center gap-3 p-4 bg-background/60 rounded-xl border border-border/50">
+      <div className="p-4 border-t border-border/50">
+        <div className="flex items-center gap-3 p-3 bg-background/60 rounded-xl border border-border/50">
           <div className="relative group">
             <div className="absolute -inset-0.5 bg-gradient-to-r from-primary to-accent rounded-xl opacity-75 group-hover:opacity-100 blur transition duration-300" />
             <div className="relative w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center text-white font-semibold shadow-lg">
@@ -222,19 +219,20 @@ export default function Sidebar({ activeSection, setActiveSection, onLogout, onC
             <p className="font-semibold text-sm truncate">{currentUser?.username || 'User'}</p>
             <p className="text-xs text-muted-foreground capitalize">{currentUser?.role || 'user'}</p>
           </div>
+          <ThemeToggle />
           <button
             onClick={onChangePassword}
-            className="p-2 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-lg transition-all"
+            className="p-1.5 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-lg transition-all"
             title="Change Password"
           >
-            <Key className="w-4 h-4" />
+            <Key className="w-3.5 h-3.5" />
           </button>
           <button
             onClick={onLogout}
-            className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-all"
+            className="p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-all"
             title="Logout"
           >
-            <LogOut className="w-4 h-4" />
+            <LogOut className="w-3.5 h-3.5" />
           </button>
         </div>
       </div>
@@ -247,12 +245,6 @@ export default function Sidebar({ activeSection, setActiveSection, onLogout, onC
       <div className="fixed inset-0 z-50 md:hidden">
         <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onMobileClose} />
         <div className="relative w-72 h-full">
-          <button
-            onClick={onMobileClose}
-            className="absolute top-4 right-4 z-10 p-2 rounded-lg bg-muted/50 text-muted-foreground hover:text-foreground transition-all"
-          >
-            <X className="w-5 h-5" />
-          </button>
           {sidebarContent}
         </div>
       </div>

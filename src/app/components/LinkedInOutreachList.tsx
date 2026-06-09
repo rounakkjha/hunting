@@ -31,17 +31,17 @@ export default function LinkedInOutreachList({ outreach, onDelete, onViewDetails
 
   return (
     <div className="relative group">
-      <div className="absolute -inset-0.5 bg-gradient-to-r from-indigo-500/20 to-indigo-600/20 rounded-3xl opacity-0 group-hover:opacity-100 blur transition duration-500" />
-      <div className="relative bg-card border border-border/50 rounded-3xl shadow-xl overflow-hidden backdrop-blur-sm">
+      <div className="absolute -inset-0.5 bg-gradient-to-r from-indigo-500/20 to-indigo-600/20 rounded-3xl opacity-0 group-hover:opacity-100 blur transition duration-500 hidden sm:block" />
+      <div className="relative bg-card border border-border/50 rounded-2xl sm:rounded-3xl shadow-xl overflow-hidden backdrop-blur-sm">
         <div className="border-b border-border/50 bg-gradient-to-r from-indigo-500/5 to-transparent px-4 py-4 sm:px-8 sm:py-6">
-          <div className="flex items-center justify-between gap-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex items-center gap-3">
-              <div className="p-3 bg-gradient-to-br from-indigo-500/10 to-indigo-600/5 rounded-2xl ring-1 ring-indigo-500/20">
-                <MessageSquare className="w-5 h-5 text-indigo-500" strokeWidth={2.5} />
+              <div className="p-2.5 sm:p-3 bg-gradient-to-br from-indigo-500/10 to-indigo-600/5 rounded-xl sm:rounded-2xl ring-1 ring-indigo-500/20">
+                <MessageSquare className="w-4 sm:w-5 h-4 sm:h-5 text-indigo-500" strokeWidth={2.5} />
               </div>
               <div>
-                <h3 className="text-xl font-bold">LinkedIn Outreach</h3>
-                <p className="text-sm text-muted-foreground mt-1">
+                <h3 className="text-base sm:text-xl font-bold">LinkedIn Outreach</h3>
+                <p className="text-xs sm:text-sm text-muted-foreground">
                   {filteredOutreach.length} of {outreach.length} connection{outreach.length !== 1 ? 's' : ''}
                 </p>
               </div>
@@ -53,7 +53,7 @@ export default function LinkedInOutreachList({ outreach, onDelete, onViewDetails
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search connections..."
-                className="w-64 pl-10 pr-10 py-2 bg-background/50 rounded-lg border border-border/60 focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none transition-all text-sm"
+                className="w-full sm:w-64 pl-10 pr-10 py-2 bg-background/50 rounded-lg border border-border/60 focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none transition-all text-sm"
               />
               {searchQuery && (
                 <button
@@ -67,9 +67,9 @@ export default function LinkedInOutreachList({ outreach, onDelete, onViewDetails
           </div>
         </div>
 
-        <div className="p-6">
+        <div className="p-3 sm:p-6">
           {outreach.length === 0 ? (
-            <div className="text-center py-16">
+            <div className="text-center py-10 sm:py-16">
               <div className="w-20 h-20 mx-auto mb-4 rounded-3xl bg-gradient-to-br from-indigo-500/10 to-indigo-600/5 flex items-center justify-center ring-1 ring-indigo-500/20">
                 <Users className="w-10 h-10 text-indigo-500/50" />
               </div>
@@ -88,11 +88,11 @@ export default function LinkedInOutreachList({ outreach, onDelete, onViewDetails
                   style={{ animationDelay: `${index * 30}ms` }}
                 >
                   <div className="absolute inset-0 bg-gradient-to-r from-primary/5 to-transparent opacity-0 group-hover/item:opacity-100 transition-opacity duration-300" />
-                  <div className="relative p-5">
-                    <div className="flex items-start justify-between gap-4">
+                  <div className="relative p-3.5 sm:p-5">
+                    <div className="flex items-start justify-between gap-3 sm:gap-4">
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-2 flex-wrap">
-                          <h4 className="font-semibold truncate text-lg group-hover/item:text-primary transition-colors">
+                        <div className="flex items-center gap-1.5 sm:gap-2 mb-1.5 sm:mb-2 flex-wrap">
+                          <h4 className="font-semibold truncate text-sm sm:text-lg group-hover/item:text-primary transition-colors">
                             {item.name || item.company || 'LinkedIn Contact'}
                           </h4>
                           {item.isAlumni && (
@@ -136,21 +136,21 @@ export default function LinkedInOutreachList({ outreach, onDelete, onViewDetails
                           </div>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1 sm:gap-2">
                         {onToggleAlumni && (
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
                               onToggleAlumni(item.id);
                             }}
-                            className={`opacity-0 group-hover/item:opacity-100 p-2.5 rounded-xl border transition-all ${
+                            className={`sm:opacity-0 sm:group-hover/item:opacity-100 p-1.5 sm:p-2.5 rounded-lg sm:rounded-xl border transition-all ${
                               item.isAlumni
                                 ? 'text-purple-500 bg-purple-500/10 border-purple-500/20 hover:bg-purple-500/20'
                                 : 'text-muted-foreground hover:text-purple-500 hover:bg-purple-500/10 border-transparent hover:border-purple-500/20'
                             }`}
                             title={item.isAlumni ? 'Mark as not alumni' : 'Mark as alumni'}
                           >
-                            <GraduationCap className="w-4 h-4" strokeWidth={2.5} />
+                            <GraduationCap className="w-3.5 sm:w-4 h-3.5 sm:h-4" strokeWidth={2.5} />
                           </button>
                         )}
                         {onToggleResponse && (
@@ -159,14 +159,14 @@ export default function LinkedInOutreachList({ outreach, onDelete, onViewDetails
                               e.stopPropagation();
                               onToggleResponse(item.id);
                             }}
-                            className={`opacity-0 group-hover/item:opacity-100 p-2.5 rounded-xl border transition-all ${
+                            className={`sm:opacity-0 sm:group-hover/item:opacity-100 p-1.5 sm:p-2.5 rounded-lg sm:rounded-xl border transition-all ${
                               item.gotResponse
                                 ? 'text-green-500 bg-green-500/10 border-green-500/20 hover:bg-green-500/20'
                                 : 'text-muted-foreground hover:text-green-500 hover:bg-green-500/10 border-transparent hover:border-green-500/20'
                             }`}
                             title={item.gotResponse ? 'Mark as no response' : 'Mark as got response'}
                           >
-                            <MailCheck className="w-4 h-4" strokeWidth={2.5} />
+                            <MailCheck className="w-3.5 sm:w-4 h-3.5 sm:h-4" strokeWidth={2.5} />
                           </button>
                         )}
                         {onEdit && (
@@ -175,10 +175,10 @@ export default function LinkedInOutreachList({ outreach, onDelete, onViewDetails
                               e.stopPropagation();
                               onEdit(item);
                             }}
-                            className="opacity-0 group-hover/item:opacity-100 p-2.5 text-blue-400 hover:bg-blue-500/10 rounded-xl border border-transparent hover:border-blue-500/20 transition-all"
+                            className="sm:opacity-0 sm:group-hover/item:opacity-100 p-1.5 sm:p-2.5 text-blue-400 hover:bg-blue-500/10 rounded-lg sm:rounded-xl border border-transparent hover:border-blue-500/20 transition-all"
                             title="Edit"
                           >
-                            <Pencil className="w-4 h-4" strokeWidth={2.5} />
+                            <Pencil className="w-3.5 sm:w-4 h-3.5 sm:h-4" strokeWidth={2.5} />
                           </button>
                         )}
                         <button
@@ -186,12 +186,12 @@ export default function LinkedInOutreachList({ outreach, onDelete, onViewDetails
                             e.stopPropagation();
                             onDelete(item.id);
                           }}
-                          className="opacity-0 group-hover/item:opacity-100 p-2.5 text-red-400 hover:bg-red-500/10 rounded-xl border border-transparent hover:border-red-500/20 transition-all"
+                          className="sm:opacity-0 sm:group-hover/item:opacity-100 p-1.5 sm:p-2.5 text-red-400 hover:bg-red-500/10 rounded-lg sm:rounded-xl border border-transparent hover:border-red-500/20 transition-all"
                           title="Delete"
                         >
-                          <Trash2 className="w-4 h-4" strokeWidth={2.5} />
+                          <Trash2 className="w-3.5 sm:w-4 h-3.5 sm:h-4" strokeWidth={2.5} />
                         </button>
-                        <ChevronRight className="w-5 h-5 text-muted-foreground group-hover/item:text-primary group-hover/item:translate-x-1 transition-all" />
+                        <ChevronRight className="w-4 sm:w-5 h-4 sm:h-5 text-muted-foreground group-hover/item:text-primary group-hover/item:translate-x-1 transition-all" />
                       </div>
                     </div>
                   </div>

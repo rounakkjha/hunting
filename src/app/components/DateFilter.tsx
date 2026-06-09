@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, addDays, subDays } from 'date-fns';
-import { Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Calendar, ChevronLeft, ChevronRight, Filter } from 'lucide-react';
 
 export type DateRange = {
   start: string; // yyyy-MM-dd
@@ -46,6 +46,7 @@ export function getAllTime(): DateRange {
 
 export default function DateFilter({ dateRange, onDateRangeChange }: DateFilterProps) {
   const [showCustom, setShowCustom] = useState(false);
+  const [expanded, setExpanded] = useState(false);
   const [customStart, setCustomStart] = useState(dateRange.start);
   const [customEnd, setCustomEnd] = useState(dateRange.end);
 
@@ -72,7 +73,16 @@ export default function DateFilter({ dateRange, onDateRangeChange }: DateFilterP
 
   return (
     <div className="relative">
-      <div className="flex items-center gap-2 flex-wrap">
+      {/* Mobile: compact filter toggle */}
+      <button
+        onClick={() => setExpanded(!expanded)}
+        className="sm:hidden flex items-center gap-2 px-3 py-2 bg-background/60 border border-border/50 rounded-lg text-xs font-semibold text-muted-foreground hover:text-foreground transition-all"
+      >
+        <Filter className="w-3.5 h-3.5" strokeWidth={2.5} />
+        {dateRange.label}
+      </button>
+      {/* Desktop: always visible. Mobile: only when expanded */}
+      <div className={`${expanded ? 'flex mt-2' : 'hidden'} sm:flex items-center gap-1.5 sm:gap-2 flex-wrap`}>
         {presets.map((preset) => (
           <button
             key={preset.label}
@@ -80,7 +90,7 @@ export default function DateFilter({ dateRange, onDateRangeChange }: DateFilterP
               onDateRangeChange(preset.fn());
               setShowCustom(false);
             }}
-            className={`px-3.5 py-2 rounded-xl text-xs font-semibold transition-all duration-200 ${
+            className={`px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-lg sm:rounded-xl text-[11px] sm:text-xs font-semibold transition-all duration-200 ${
               dateRange.label === preset.label
                 ? 'bg-gradient-to-r from-primary to-accent text-white shadow-lg shadow-primary/25 scale-105'
                 : 'bg-background/60 text-muted-foreground hover:text-foreground hover:bg-background/80 border border-border/50 hover:border-primary/30'
@@ -91,13 +101,13 @@ export default function DateFilter({ dateRange, onDateRangeChange }: DateFilterP
         ))}
         <button
           onClick={() => setShowCustom(!showCustom)}
-          className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold transition-all duration-200 ${
+          className={`flex items-center gap-1.5 px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-lg sm:rounded-xl text-[11px] sm:text-xs font-semibold transition-all duration-200 ${
             showCustom || (dateRange.label !== 'Today' && dateRange.label !== 'Yesterday' && dateRange.label !== 'This Week' && dateRange.label !== 'This Month' && dateRange.label !== 'All Time')
               ? 'bg-gradient-to-r from-primary to-accent text-white shadow-lg shadow-primary/25'
               : 'bg-background/60 text-muted-foreground hover:text-foreground hover:bg-background/80 border border-border/50 hover:border-primary/30'
           }`}
         >
-          <Calendar className="w-3.5 h-3.5" />
+          <Calendar className="w-3 sm:w-3.5 h-3 sm:h-3.5" />
           Custom
         </button>
       </div>

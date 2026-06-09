@@ -256,8 +256,8 @@ export default function DetailViewModal({
     <>
       <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center sm:p-6 z-50 animate-fade-in" onClick={onClose}>
         <div className="bg-gradient-to-br from-card to-card/50 rounded-t-2xl sm:rounded-2xl border border-border/60 shadow-2xl w-full sm:max-w-2xl max-h-[85vh] sm:max-h-[90vh] overflow-hidden animate-scale-in" onClick={(e) => e.stopPropagation()}>
-          <div className="flex items-center justify-between px-6 py-5 border-b border-border/40">
-            <h3 className="text-lg">{titles[type]}</h3>
+          <div className="flex items-center justify-between px-4 sm:px-6 py-4 sm:py-5 border-b border-border/40">
+            <h3 className="text-base sm:text-lg font-semibold">{titles[type]}</h3>
             <div className="flex items-center gap-2">
               {!isEditing ? (
                 <button

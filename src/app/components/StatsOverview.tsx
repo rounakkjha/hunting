@@ -72,7 +72,7 @@ export default function StatsOverview({ userData, onNavigate }: StatsOverviewPro
   ];
 
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5 sm:gap-4">
       {stats.map((stat, index) => (
         <div
           key={stat.label}
@@ -81,18 +81,18 @@ export default function StatsOverview({ userData, onNavigate }: StatsOverviewPro
           onClick={() => stat.section && onNavigate?.(stat.section)}
         >
           <div className={`relative bg-card border border-border/50 rounded-2xl shadow-sm hover:shadow-lg hover:shadow-primary/5 hover:-translate-y-1 transition-all duration-300 ${stat.section ? 'cursor-pointer' : ''}`}>
-            <div className="relative p-5">
-              <div className="flex items-center gap-3 mb-3">
-                <div className={`p-2 rounded-lg bg-gradient-to-br ${stat.color} shadow-sm`}>
-                  <stat.icon className="w-4 h-4 text-white" strokeWidth={2.5} />
+            <div className="relative p-3.5 sm:p-5">
+              <div className="flex items-center gap-2 sm:gap-3 mb-2 sm:mb-3">
+                <div className={`p-1.5 sm:p-2 rounded-lg bg-gradient-to-br ${stat.color} shadow-sm`}>
+                  <stat.icon className="w-3.5 sm:w-4 h-3.5 sm:h-4 text-white" strokeWidth={2.5} />
                 </div>
-                <p className="text-xs text-muted-foreground font-medium">{stat.label}</p>
+                <p className="text-[10px] sm:text-xs text-muted-foreground font-medium">{stat.label}</p>
               </div>
-              <p className={`text-3xl font-bold tracking-tight ${stat.textColor}`}>
+              <p className={`text-2xl sm:text-3xl font-bold tracking-tight ${stat.textColor}`}>
                 {stat.value}
               </p>
               {stat.subtitle && (
-                <p className="text-[11px] text-muted-foreground mt-1.5 font-medium">{stat.subtitle}</p>
+                <p className="text-[10px] sm:text-[11px] text-muted-foreground mt-1 sm:mt-1.5 font-medium">{stat.subtitle}</p>
               )}
             </div>
           </div>

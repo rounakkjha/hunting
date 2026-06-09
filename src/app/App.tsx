@@ -228,12 +228,14 @@ export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [userData, setUserData] = useState<UserData>(EMPTY_DATA);
+  const [isTrial, setIsTrial] = useState(false);
   const dataLoaded = useRef(false);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Restore authentication state from localStorage on mount
+  // Restore authentication state from localStorage or sessionStorage on mount
   useEffect(() => {
     const storedUser = localStorage.getItem('huntlog-auth-user');
+    const trialUser = sessionStorage.getItem('huntlog-trial-user');
     if (storedUser) {
       try {
         const user = JSON.parse(storedUser);
@@ -242,6 +244,15 @@ export default function App() {
       } catch (e) {
         console.error('[App] Failed to parse stored user:', e);
         localStorage.removeItem('huntlog-auth-user');
+      }
+    } else if (trialUser) {
+      try {
+        const user = JSON.parse(trialUser);
+        setCurrentUser(user);
+        setIsAuthenticated(true);
+        setIsTrial(true);
+      } catch (e) {
+        sessionStorage.removeItem('huntlog-trial-user');
       }
     }
   }, []);
@@ -261,18 +272,39 @@ export default function App() {
     return false;
   };
 
+  const handleTrialStart = () => {
+    const trialUser: User = {
+      id: 'trial_' + Date.now(),
+      username: 'Trial User',
+      role: 'user',
+      createdAt: new Date().toISOString(),
+    };
+    setCurrentUser(trialUser);
+    setIsAuthenticated(true);
+    setIsTrial(true);
+    setUserData(EMPTY_DATA);
+    dataLoaded.current = true;
+    sessionStorage.setItem('huntlog-trial-user', JSON.stringify(trialUser));
+  };
+
   const handleLogout = () => {
     setCurrentUser(null);
     setIsAuthenticated(false);
     setUserData(EMPTY_DATA);
+    setIsTrial(false);
     dataLoaded.current = false;
     localStorage.removeItem('huntlog-auth-user');
+    sessionStorage.removeItem('huntlog-trial-user');
   };
 
 
-  // Load data when authenticated — prefer backend, fall back to localStorage
+  // Load data when authenticated — prefer backend, fall back to localStorage (skip for trial)
   useEffect(() => {
     if (!isAuthenticated || !currentUser) return;
+    if (isTrial) {
+      dataLoaded.current = true;
+      return;
+    }
 
     (async () => {
       console.log('[App] Loading data for user:', currentUser.username);
@@ -309,9 +341,10 @@ export default function App() {
     };
   }, [isAuthenticated, currentUser]);
 
-  // Persist to localStorage immediately + backend with a short debounce
+  // Persist to localStorage immediately + backend with a short debounce (skip for trial)
   useEffect(() => {
     if (!isAuthenticated || !currentUser) return;
+    if (isTrial) return; // Trial mode: no persistence
     if (!dataLoaded.current) {
       console.log('[App] Data not loaded yet, skipping save');
       return;
@@ -334,14 +367,14 @@ export default function App() {
   if (!isAuthenticated) {
     return (
       <ToastProvider>
-        <Login onLogin={handleLogin} onCheckUser={handleCheckUser} />
+        <Login onLogin={handleLogin} onCheckUser={handleCheckUser} onTrial={handleTrialStart} />
       </ToastProvider>
     );
   }
 
   return (
     <ToastProvider>
-      <Dashboard userData={userData} setUserData={setUserData} onLogout={handleLogout} currentUser={currentUser} />
+      <Dashboard userData={userData} setUserData={setUserData} onLogout={handleLogout} currentUser={currentUser} isTrial={isTrial} />
     </ToastProvider>
   );
 }

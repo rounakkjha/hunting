@@ -71,17 +71,17 @@ export default function ColdEmailsList({ coldEmails, onDelete, onViewDetails, on
 
   return (
     <div className="relative group">
-      <div className="absolute -inset-0.5 bg-gradient-to-r from-indigo-500/20 to-indigo-600/20 rounded-3xl opacity-0 group-hover:opacity-100 blur transition duration-500" />
-      <div className="relative bg-card border border-border/50 rounded-3xl shadow-xl overflow-hidden backdrop-blur-sm">
+      <div className="absolute -inset-0.5 bg-gradient-to-r from-indigo-500/20 to-indigo-600/20 rounded-3xl opacity-0 group-hover:opacity-100 blur transition duration-500 hidden sm:block" />
+      <div className="relative bg-card border border-border/50 rounded-2xl sm:rounded-3xl shadow-xl overflow-hidden backdrop-blur-sm">
         <div className="border-b border-border/50 bg-gradient-to-r from-indigo-500/5 to-transparent px-4 py-4 sm:px-8 sm:py-6">
-          <div className="flex items-center justify-between mb-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 sm:mb-6">
             <div className="flex items-center gap-3">
-              <div className="p-3 bg-gradient-to-br from-indigo-500/10 to-indigo-600/5 rounded-2xl ring-1 ring-indigo-500/20">
-                <Mail className="w-5 h-5 text-indigo-500" strokeWidth={2.5} />
+              <div className="p-2.5 sm:p-3 bg-gradient-to-br from-indigo-500/10 to-indigo-600/5 rounded-xl sm:rounded-2xl ring-1 ring-indigo-500/20">
+                <Mail className="w-4 sm:w-5 h-4 sm:h-5 text-indigo-500" strokeWidth={2.5} />
               </div>
               <div>
-                <h3 className="text-xl font-bold">Cold Emails</h3>
-                <p className="text-sm text-muted-foreground mt-1">{filteredEmails.length} of {coldEmails.length} emails</p>
+                <h3 className="text-base sm:text-xl font-bold">Cold Emails</h3>
+                <p className="text-xs sm:text-sm text-muted-foreground">{filteredEmails.length} of {coldEmails.length} emails</p>
               </div>
             </div>
             <div className="relative">
@@ -91,7 +91,7 @@ export default function ColdEmailsList({ coldEmails, onDelete, onViewDetails, on
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search emails..."
-                className="w-64 pl-10 pr-10 py-2 bg-background/50 rounded-lg border border-border/60 focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none transition-all text-sm"
+                className="w-full sm:w-64 pl-10 pr-10 py-2 bg-background/50 rounded-lg border border-border/60 focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none transition-all text-sm"
               />
               {searchQuery && (
                 <button
@@ -104,10 +104,10 @@ export default function ColdEmailsList({ coldEmails, onDelete, onViewDetails, on
             </div>
           </div>
 
-          <div className="flex gap-2">
+          <div className="flex gap-2 overflow-x-auto">
             <button
               onClick={() => { setActiveTab('all'); setShowAll(false); }}
-              className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-300 ${
+              className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg sm:rounded-xl text-xs sm:text-sm font-semibold transition-all duration-300 shrink-0 ${
                 activeTab === 'all'
                   ? 'bg-gradient-to-r from-primary to-accent text-white shadow-lg shadow-primary/25'
                   : 'bg-background/50 text-muted-foreground hover:text-foreground hover:bg-background/80 border border-border/60'
@@ -117,7 +117,7 @@ export default function ColdEmailsList({ coldEmails, onDelete, onViewDetails, on
             </button>
             <button
               onClick={() => { setActiveTab('initial'); setShowAll(false); }}
-              className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-300 ${
+              className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg sm:rounded-xl text-xs sm:text-sm font-semibold transition-all duration-300 shrink-0 ${
                 activeTab === 'initial'
                   ? 'bg-gradient-to-r from-primary to-accent text-white shadow-lg shadow-primary/25'
                   : 'bg-background/50 text-muted-foreground hover:text-foreground hover:bg-background/80 border border-border/60'
@@ -127,21 +127,21 @@ export default function ColdEmailsList({ coldEmails, onDelete, onViewDetails, on
             </button>
             <button
               onClick={() => { setActiveTab('followup'); setShowAll(false); }}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-300 ${
+              className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg sm:rounded-xl text-xs sm:text-sm font-semibold transition-all duration-300 shrink-0 ${
                 activeTab === 'followup'
                   ? 'bg-gradient-to-r from-primary to-accent text-white shadow-lg shadow-primary/25'
                   : 'bg-background/50 text-muted-foreground hover:text-foreground hover:bg-background/80 border border-border/60'
               }`}
             >
-              <Reply className="w-4 h-4" />
+              <Reply className="w-3.5 sm:w-4 h-3.5 sm:h-4" />
               Follow-ups ({followUpEmails.length})
             </button>
           </div>
         </div>
 
-        <div className="p-6">
+        <div className="p-3 sm:p-6">
           {displayEmails.length === 0 ? (
-            <div className="text-center py-16">
+            <div className="text-center py-10 sm:py-16">
               <div className="w-20 h-20 mx-auto mb-4 rounded-3xl bg-gradient-to-br from-indigo-500/10 to-indigo-600/5 flex items-center justify-center ring-1 ring-indigo-500/20">
                 <Send className="w-10 h-10 text-indigo-500/50" />
               </div>
@@ -163,11 +163,11 @@ export default function ColdEmailsList({ coldEmails, onDelete, onViewDetails, on
                   style={{ animationDelay: `${index * 30}ms` }}
                 >
                   <div className="absolute inset-0 bg-gradient-to-r from-primary/5 to-transparent opacity-0 group-hover/item:opacity-100 transition-opacity duration-300" />
-                  <div className="relative p-5">
-                    <div className="flex items-start justify-between gap-4">
+                  <div className="relative p-3.5 sm:p-5">
+                    <div className="flex items-start justify-between gap-3 sm:gap-4">
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-2 flex-wrap">
-                          <h4 className="font-semibold truncate text-lg group-hover/item:text-primary transition-colors">
+                        <div className="flex items-center gap-1.5 sm:gap-2 mb-1.5 sm:mb-2 flex-wrap">
+                          <h4 className="font-semibold truncate text-sm sm:text-lg group-hover/item:text-primary transition-colors">
                             {email.company}
                           </h4>
                           {email.isFollowUp && (
@@ -252,21 +252,21 @@ export default function ColdEmailsList({ coldEmails, onDelete, onViewDetails, on
                           </div>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1 sm:gap-2">
                         {!email.isFollowUp && onToggleFollowUpDone && (
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
                               onToggleFollowUpDone(email.id);
                             }}
-                            className={`opacity-0 group-hover/item:opacity-100 p-2.5 rounded-xl border transition-all ${
+                            className={`sm:opacity-0 sm:group-hover/item:opacity-100 p-1.5 sm:p-2.5 rounded-lg sm:rounded-xl border transition-all ${
                               email.followUpDone
                                 ? 'text-green-500 bg-green-500/10 border-green-500/20 hover:bg-green-500/20'
                                 : 'text-muted-foreground hover:text-green-500 hover:bg-green-500/10 border-transparent hover:border-green-500/20'
                             }`}
                             title={email.followUpDone ? 'Mark follow-up as not done' : 'Mark follow-up as done'}
                           >
-                            <CheckCircle2 className="w-4 h-4" strokeWidth={2.5} />
+                            <CheckCircle2 className="w-3.5 sm:w-4 h-3.5 sm:h-4" strokeWidth={2.5} />
                           </button>
                         )}
                         <button
@@ -274,14 +274,14 @@ export default function ColdEmailsList({ coldEmails, onDelete, onViewDetails, on
                             e.stopPropagation();
                             onToggleResponse(email.id);
                           }}
-                          className={`opacity-0 group-hover/item:opacity-100 p-2.5 rounded-xl border transition-all ${
+                          className={`sm:opacity-0 sm:group-hover/item:opacity-100 p-1.5 sm:p-2.5 rounded-lg sm:rounded-xl border transition-all ${
                             email.gotResponse
                               ? 'text-green-500 bg-green-500/10 border-green-500/20 hover:bg-green-500/20'
                               : 'text-muted-foreground hover:text-green-500 hover:bg-green-500/10 border-transparent hover:border-green-500/20'
                           }`}
                           title={email.gotResponse ? 'Mark as no response' : 'Mark as got response'}
                         >
-                          <MailCheck className="w-4 h-4" strokeWidth={2.5} />
+                          <MailCheck className="w-3.5 sm:w-4 h-3.5 sm:h-4" strokeWidth={2.5} />
                         </button>
                         {onEdit && (
                           <button
@@ -289,10 +289,10 @@ export default function ColdEmailsList({ coldEmails, onDelete, onViewDetails, on
                               e.stopPropagation();
                               onEdit(email);
                             }}
-                            className="opacity-0 group-hover/item:opacity-100 p-2.5 text-blue-400 hover:bg-blue-500/10 rounded-xl border border-transparent hover:border-blue-500/20 transition-all"
+                            className="sm:opacity-0 sm:group-hover/item:opacity-100 p-1.5 sm:p-2.5 text-blue-400 hover:bg-blue-500/10 rounded-lg sm:rounded-xl border border-transparent hover:border-blue-500/20 transition-all"
                             title="Edit"
                           >
-                            <Pencil className="w-4 h-4" strokeWidth={2.5} />
+                            <Pencil className="w-3.5 sm:w-4 h-3.5 sm:h-4" strokeWidth={2.5} />
                           </button>
                         )}
                         <button
@@ -300,12 +300,12 @@ export default function ColdEmailsList({ coldEmails, onDelete, onViewDetails, on
                             e.stopPropagation();
                             onDelete(email.id);
                           }}
-                          className="opacity-0 group-hover/item:opacity-100 p-2.5 text-red-400 hover:bg-red-500/10 rounded-xl border border-transparent hover:border-red-500/20 transition-all"
+                          className="sm:opacity-0 sm:group-hover/item:opacity-100 p-1.5 sm:p-2.5 text-red-400 hover:bg-red-500/10 rounded-lg sm:rounded-xl border border-transparent hover:border-red-500/20 transition-all"
                           title="Delete"
                         >
-                          <Trash2 className="w-4 h-4" strokeWidth={2.5} />
+                          <Trash2 className="w-3.5 sm:w-4 h-3.5 sm:h-4" strokeWidth={2.5} />
                         </button>
-                        <ChevronRight className="w-5 h-5 text-muted-foreground group-hover/item:text-primary group-hover/item:translate-x-1 transition-all" />
+                        <ChevronRight className="w-4 sm:w-5 h-4 sm:h-5 text-muted-foreground group-hover/item:text-primary group-hover/item:translate-x-1 transition-all" />
                       </div>
                     </div>
                   </div>
