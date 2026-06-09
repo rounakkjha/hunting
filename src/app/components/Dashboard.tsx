@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { format } from 'date-fns';
 import {
   Plus,
@@ -6,8 +6,11 @@ import {
   Mail,
   MessageSquare,
   BookOpen,
+  Menu,
+  Building2,
+  Briefcase,
 } from 'lucide-react';
-import type { UserData, JobApplication, ColdEmail, LinkedInOutreach, CustomField } from '../App';
+import type { UserData, JobApplication, ColdEmail, LinkedInOutreach, CustomField, TrashItem, TrashItemType, User, Interview, InterviewStatus, InterviewRoundStatus } from '../App';
 import Sidebar from './Sidebar';
 import TimeGreeting from './TimeGreeting';
 import AdvancedStats from './AdvancedStats';
@@ -18,21 +21,209 @@ import TodoList from './TodoList';
 import ApplicationsList from './ApplicationsList';
 import ColdEmailsList from './ColdEmailsList';
 import LinkedInOutreachList from './LinkedInOutreachList';
+import InterviewList from './InterviewList';
 import DetailViewModal from './DetailViewModal';
+import DateFilter, { getAllTime, type DateRange } from './DateFilter';
+import AnimatedBackground from './AnimatedBackground';
+import GlobalSearch from './GlobalSearch';
+import SavedLinks from './SavedLinks';
+import TargetCompanies from './TargetCompanies';
+import ConfirmDialog from './ConfirmDialog';
+import TrashBin from './TrashBin';
+import { useToast } from './Toast';
+import StrategyBoard from './StrategyBoard';
+import UserManagement from './UserManagement';
 
 interface DashboardProps {
   userData: UserData;
   setUserData: (data: UserData | ((prev: UserData) => UserData)) => void;
   onLogout: () => void;
+  currentUser: User | null;
 }
 
-type ModalType = 'application' | 'coldEmail' | 'linkedin' | 'content' | null;
+type ModalType = 'application' | 'coldEmail' | 'linkedin' | 'content' | 'interview' | null;
 type DetailViewType = { type: 'application'; entry: JobApplication } | { type: 'coldEmail'; entry: ColdEmail } | { type: 'linkedin'; entry: LinkedInOutreach } | null;
 
-export default function Dashboard({ userData, setUserData, onLogout }: DashboardProps) {
+// Static toast messages - defined outside component to prevent recreation on every render
+const quirkyToasts = {
+    addApplication: [
+      '🎯 Application fired off! Let the games begin.',
+      '🚀 One more shot at glory. Application sent!',
+      '💼 Resume dropped. Ball is in their court now.',
+      '🎪 Another ring in the circus — application added!',
+    ],
+    addEmail: [
+      '📧 Cold email sent. Warming up inboxes!',
+      '🧊 Ice breaker deployed. Email logged!',
+      '✉️ Sliding into inboxes like a pro.',
+      '📬 Message in a bottle — cold email added!',
+    ],
+    addLinkedin: [
+      '💬 LinkedIn outreach locked in!',
+      '🤝 Professional stalking initiated. Outreach added!',
+      '🔗 Connection request queued. Networking mode ON.',
+      '💼 LinkedIn game just leveled up!',
+    ],
+    addContent: [
+      '📝 Content banked for later!',
+      '🧠 Big brain content saved.',
+      '✍️ Creative genius documented!',
+      '📚 Knowledge stashed. Content added!',
+    ],
+    addTodo: [
+      '✅ Task added. Time to crush it!',
+      '📋 One more thing on the hustle list.',
+      '💪 Added to the grind. Let\'s get it done!',
+      '🎯 Target locked. New task on deck.',
+    ],
+    addLink: [
+      '🔗 Link stashed for quick access!',
+      '🌐 Bookmarked like a boss.',
+      '📌 Pinned! That link isn\'t going anywhere.',
+      '⚡ Quick link saved. Speed run ready.',
+    ],
+    addCompany: [
+      '🏢 New target on the radar!',
+      '🎯 Company locked in the crosshairs.',
+      '🏹 Another one on the hit list. Company added!',
+      '🔍 Scouting new territory. Target company logged.',
+    ],
+    addStrategy: [
+      '🎯 Strategy step locked in!',
+      '🧠 Master plan updated. You\'re one step ahead.',
+      '♟️ Chess move added to the playbook.',
+      '📐 Strategy refined. Execution pending.',
+    ],
+    delete: [
+      '🗑️ Poof! Gone but not forgotten (check trash).',
+      '💀 Sent to the shadow realm... I mean trash.',
+      '🧹 Cleaned up! Moved to trash.',
+      '👋 Bye bye! Off to the recycle bin.',
+    ],
+    edit: [
+      '✏️ Edited! Looking sharper already.',
+      '🔧 Tweaked to perfection.',
+      '✨ Polished and updated!',
+      '📝 Quick fix applied. Nailed it.',
+    ],
+    restore: [
+      '♻️ Back from the dead! Restored.',
+      '🔄 Second chance granted. Item restored!',
+      '🦸 Rescued from the trash! Hero moment.',
+      '⏪ Undo master. Successfully restored!',
+    ],
+    permanentDelete: [
+      '💥 Gone forever. No takebacks.',
+      '☠️ Permanently obliterated.',
+      '🕳️ Into the void. Permanently deleted.',
+      '� Burnt to a crisp. No recovery possible.',
+    ],
+    toggle: [
+      '🎉 Task complete! You\'re unstoppable.',
+      '✨ Another one bites the dust!',
+      '🏆 Done and dusted. Moving on!',
+      '⚡ Knocked it out! What\'s next?',
+    ],
+  };
+
+// Helper function for random toast selection
+const randomPick = (arr: string[]) => arr[Math.floor(Math.random() * arr.length)];
+
+// Static collection key mapping
+const collectionKeyMap: Record<string, string> = {
+    application: 'applications',
+    coldEmail: 'coldEmails',
+    linkedin: 'linkedInOutreach',
+    content: 'contentLibrary',
+    todo: 'todos',
+    savedLink: 'savedLinks',
+    targetCompany: 'targetCompanies',
+    interview: 'interviews',
+  };
+
+export default function Dashboard({ userData, setUserData, onLogout, currentUser }: DashboardProps) {
   const [activeSection, setActiveSection] = useState('dashboard');
   const [activeModal, setActiveModal] = useState<ModalType>(null);
+  const [editingEntry, setEditingEntry] = useState<any>(null);
   const [detailView, setDetailView] = useState<DetailViewType>(null);
+  const [dateRange, setDateRange] = useState<DateRange>(getAllTime());
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState<{ action: () => void; label: string } | null>(null);
+  const { showToast } = useToast();
+
+  const softDelete = (type: TrashItemType, id: string, label: string) => {
+    setConfirmDelete({
+      label,
+      action: () => {
+        setUserData((prev) => {
+          const key = collectionKeyMap[type] as keyof UserData;
+          const collection = prev[key] as any[];
+          const item = collection.find((i: any) => i.id === id);
+          if (!item) return prev;
+          const trashItem: TrashItem = {
+            id: Date.now().toString(),
+            type,
+            label,
+            deletedAt: new Date().toISOString(),
+            data: item,
+          };
+          return {
+            ...prev,
+            [key]: collection.filter((i: any) => i.id !== id),
+            trash: [trashItem, ...prev.trash],
+          };
+        });
+        showToast(randomPick(quirkyToasts.delete));
+        setConfirmDelete(null);
+      },
+    });
+  };
+
+  const handleRestore = (trashItem: TrashItem) => {
+    setUserData((prev) => {
+      const key = collectionKeyMap[trashItem.type] as keyof UserData;
+      const collection = prev[key] as any[];
+      return {
+        ...prev,
+        [key]: [trashItem.data, ...collection],
+        trash: prev.trash.filter((t) => t.id !== trashItem.id),
+      };
+    });
+    showToast(randomPick(quirkyToasts.restore));
+  };
+
+  const handlePermanentDelete = (trashId: string) => {
+    setUserData((prev) => ({
+      ...prev,
+      trash: prev.trash.filter((t) => t.id !== trashId),
+    }));
+    showToast(randomPick(quirkyToasts.permanentDelete));
+  };
+
+  // Carry forward overdue incomplete todos to today
+  const today = format(new Date(), 'yyyy-MM-dd');
+  const todosWithCarryForward = useMemo(() => {
+    return userData.todos.map((t) => {
+      if (!t.completed && t.date < today) {
+        return { ...t, date: today, carryForward: true };
+      }
+      return t;
+    });
+  }, [userData.todos, today]);
+
+  // Filter all data by date range
+  const filteredData = useMemo(() => {
+    const { start, end } = dateRange;
+    return {
+      ...userData,
+      applications: userData.applications.filter((a) => a.date >= start && a.date <= end),
+      coldEmails: userData.coldEmails.filter((e) => e.date >= start && e.date <= end),
+      linkedInOutreach: userData.linkedInOutreach.filter((l) => l.date >= start && l.date <= end),
+      contentLibrary: userData.contentLibrary,
+      todos: todosWithCarryForward.filter((t: any) => t.date >= start && t.date <= end),
+    };
+  }, [userData, dateRange, todosWithCarryForward]);
 
   const handleUpdateEntry = (id: string, updates: any) => {
     if (!detailView) return;
@@ -58,6 +249,7 @@ export default function Dashboard({ userData, setUserData, onLogout }: Dashboard
           return prev;
       }
     });
+    showToast(randomPick(quirkyToasts.edit));
   };
 
   const handleAddCustomField = (field: CustomField, applyToAll: boolean) => {
@@ -89,105 +281,202 @@ export default function Dashboard({ userData, setUserData, onLogout }: Dashboard
   };
 
   const quickActions = [
-    { type: 'application' as const, icon: FileText, label: 'Job Applied', color: 'from-blue-500 to-blue-600' },
-    { type: 'coldEmail' as const, icon: Mail, label: 'Cold Email', color: 'from-cyan-500 to-cyan-600' },
-    { type: 'linkedin' as const, icon: MessageSquare, label: 'LinkedIn Outreach', color: 'from-purple-500 to-purple-600' },
-    { type: 'content' as const, icon: BookOpen, label: 'Add Content', color: 'from-green-500 to-green-600' },
+    { type: 'application' as const, icon: FileText, label: 'Job Applied', color: 'from-indigo-500 to-indigo-600' },
+    { type: 'coldEmail' as const, icon: Mail, label: 'Cold Email', color: 'from-indigo-400 to-indigo-500' },
+    { type: 'linkedin' as const, icon: MessageSquare, label: 'LinkedIn Outreach', color: 'from-indigo-500 to-indigo-700' },
+    { type: 'interview' as const, icon: Briefcase, label: 'Interview', color: 'from-purple-500 to-purple-600' },
+    { type: 'content' as const, icon: BookOpen, label: 'Add Content', color: 'from-indigo-400 to-indigo-600' },
   ];
 
   const renderContent = () => {
     switch (activeSection) {
       case 'dashboard':
         return (
-          <div className="space-y-8">
-            <TimeGreeting />
-            <StatsOverview userData={userData} />
-            <AdvancedStats userData={userData} />
-
-            {/* Quick Actions */}
-            <div className="relative group">
-              <div className="absolute -inset-1 bg-gradient-to-r from-primary/20 to-accent/20 rounded-3xl blur-lg opacity-50 group-hover:opacity-75 transition duration-500" />
-              <div className="relative bg-card border border-border/50 rounded-3xl shadow-xl backdrop-blur-sm p-8">
-                <div className="flex items-center gap-3 mb-8">
-                  <div className="p-3 bg-gradient-to-br from-primary/10 to-accent/10 rounded-2xl ring-1 ring-primary/20">
-                    <Plus className="w-5 h-5 text-primary" strokeWidth={2.5} />
-                  </div>
-                  <div>
-                    <h2 className="text-2xl font-bold">Quick Actions</h2>
-                    <p className="text-sm text-muted-foreground mt-1">Add new entries with one click</p>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                  {quickActions.map((action) => (
-                    <button
-                      key={action.type}
-                      onClick={() => setActiveModal(action.type)}
-                      className="group/btn relative p-6 bg-background/50 backdrop-blur-sm rounded-2xl border border-border/60 hover:border-primary/50 transition-all duration-300 hover:shadow-lg hover:shadow-primary/10 hover:-translate-y-1"
-                    >
-                      <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-accent/5 rounded-2xl opacity-0 group-hover/btn:opacity-100 transition-opacity duration-300" />
-                      <div className="relative">
-                        <div className={`w-14 h-14 mb-4 rounded-2xl bg-gradient-to-br ${action.color} flex items-center justify-center shadow-lg group-hover/btn:scale-110 group-hover/btn:rotate-3 transition-all duration-300`}>
-                          <action.icon className="w-7 h-7 text-white" strokeWidth={2.5} />
-                        </div>
-                        <h3 className="text-sm font-semibold group-hover/btn:text-primary transition-colors duration-300">{action.label}</h3>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              </div>
+          <div className="space-y-6 sm:space-y-8">
+            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 sm:gap-6">
+              <TimeGreeting />
+              <DateFilter dateRange={dateRange} onDateRangeChange={setDateRange} />
             </div>
+            <GlobalSearch
+              userData={userData}
+              onNavigate={setActiveSection}
+              onViewApplication={(app) => setDetailView({ type: 'application', entry: app })}
+              onViewColdEmail={(email) => setDetailView({ type: 'coldEmail', entry: email })}
+              onViewLinkedIn={(outreach) => setDetailView({ type: 'linkedin', entry: outreach })}
+            />
+            <StatsOverview userData={filteredData} onNavigate={setActiveSection} />
+            <AdvancedStats userData={filteredData} />
           </div>
         );
 
       case 'applications':
         return (
           <div className="space-y-6">
-            <div className="flex items-center justify-between">
-              <h2 className="text-3xl font-bold">Job Applications</h2>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <h2 className="text-2xl sm:text-3xl font-bold">Job Applications</h2>
               <button
                 onClick={() => setActiveModal('application')}
-                className="flex items-center gap-2 px-5 py-3 bg-gradient-to-r from-primary to-accent text-white rounded-2xl shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/40 transition-all duration-300 hover:scale-105"
+                className="flex items-center gap-2 px-4 py-2.5 sm:px-5 sm:py-3 bg-gradient-to-r from-primary to-accent text-white rounded-2xl shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/40 transition-all duration-300 hover:scale-105 text-sm sm:text-base w-fit"
               >
                 <Plus className="w-5 h-5" strokeWidth={2.5} />
                 Add Application
               </button>
             </div>
+            <DateFilter dateRange={dateRange} onDateRangeChange={setDateRange} />
             <ApplicationsList
-              applications={userData.applications}
-              onDelete={(id) =>
-                setUserData((prev) => ({
-                  ...prev,
-                  applications: prev.applications.filter((a) => a.id !== id),
-                }))
-              }
+              applications={filteredData.applications}
+              onDelete={(id) => {
+                const app = userData.applications.find((a) => a.id === id);
+                softDelete('application', id, app?.company || 'Application');
+              }}
               onViewDetails={(app) => setDetailView({ type: 'application', entry: app })}
+              onUpdateTag={(id, tag) => {
+                setUserData((prev) => {
+                  const updated = {
+                    ...prev,
+                    applications: prev.applications.map((a) =>
+                      a.id === id ? { ...a, emailTag: tag } : a
+                    ),
+                  };
+                  // Auto-add to target companies when marked as "need_to_mail"
+                  if (tag === 'need_to_mail') {
+                    const app = prev.applications.find((a) => a.id === id);
+                    if (app?.company) {
+                      const alreadyExists = prev.targetCompanies.some(
+                        (tc) => tc.company.toLowerCase() === app.company.toLowerCase()
+                      );
+                      if (!alreadyExists) {
+                        updated.targetCompanies = [
+                          {
+                            id: Date.now().toString(),
+                            date: format(new Date(), 'yyyy-MM-dd'),
+                            company: app.company,
+                            role: app.role,
+                            contacts: [],
+                          },
+                          ...prev.targetCompanies,
+                        ];
+                        showToast(randomPick(quirkyToasts.addCompany));
+                      }
+                    }
+                  }
+                  return updated;
+                });
+              }}
+              onEdit={(app) => {
+                setEditingEntry(app);
+                setActiveModal('application');
+              }}
             />
+            {/* Companies needing mail that aren't in target companies */}
+            {(() => {
+              const needToMailApps = userData.applications.filter((a) => a.emailTag === 'need_to_mail');
+              const ignored = userData.ignoredTargetSuggestions || [];
+              const missingFromTargets = needToMailApps.filter(
+                (app) =>
+                  !userData.targetCompanies.some(
+                    (tc) => tc.company.toLowerCase() === app.company.toLowerCase()
+                  ) &&
+                  !ignored.some((ig) => ig.toLowerCase() === app.company.toLowerCase())
+              );
+              if (missingFromTargets.length === 0) return null;
+              return (
+                <div className="p-4 bg-amber-500/5 border border-amber-500/20 rounded-2xl space-y-3">
+                  <p className="text-sm font-semibold text-amber-500 flex items-center gap-2">
+                    <Building2 className="w-4 h-4" />
+                    Companies marked &quot;Need to Mail&quot; not in Target Companies
+                  </p>
+                  <div className="space-y-2">
+                    {missingFromTargets.map((app) => (
+                      <div key={app.id} className="flex items-center justify-between gap-3 p-2.5 bg-background/50 rounded-xl border border-border/40">
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium truncate">{app.company}</p>
+                          {app.role && <p className="text-xs text-muted-foreground">{app.role}</p>}
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <button
+                            onClick={() => {
+                              setUserData((prev) => ({
+                                ...prev,
+                                ignoredTargetSuggestions: [...(prev.ignoredTargetSuggestions || []), app.company],
+                              }));
+                            }}
+                            className="px-3 py-1.5 bg-muted/50 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg text-xs font-medium border border-border/40 transition-all"
+                          >
+                            Ignore
+                          </button>
+                          <button
+                            onClick={() => {
+                              setUserData((prev) => ({
+                                ...prev,
+                                targetCompanies: [
+                                  {
+                                    id: Date.now().toString() + Math.random().toString(36).slice(2),
+                                    date: format(new Date(), 'yyyy-MM-dd'),
+                                    company: app.company,
+                                    role: app.role,
+                                    contacts: [],
+                                  },
+                                  ...prev.targetCompanies,
+                                ],
+                              }));
+                              showToast(randomPick(quirkyToasts.addCompany));
+                            }}
+                            className="px-3 py-1.5 bg-gradient-to-r from-primary to-accent text-white rounded-lg text-xs font-medium hover:shadow-lg transition-all"
+                          >
+                            + Add to Targets
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
           </div>
         );
 
       case 'emails':
         return (
           <div className="space-y-6">
-            <div className="flex items-center justify-between">
-              <h2 className="text-3xl font-bold">Cold Emails</h2>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <h2 className="text-2xl sm:text-3xl font-bold">Cold Emails</h2>
               <button
                 onClick={() => setActiveModal('coldEmail')}
-                className="flex items-center gap-2 px-5 py-3 bg-gradient-to-r from-primary to-accent text-white rounded-2xl shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/40 transition-all duration-300 hover:scale-105"
+                className="flex items-center gap-2 px-4 py-2.5 sm:px-5 sm:py-3 bg-gradient-to-r from-primary to-accent text-white rounded-2xl shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/40 transition-all duration-300 hover:scale-105 text-sm sm:text-base w-fit"
               >
                 <Plus className="w-5 h-5" strokeWidth={2.5} />
                 Add Cold Email
               </button>
             </div>
+            <DateFilter dateRange={dateRange} onDateRangeChange={setDateRange} />
             <ColdEmailsList
-              coldEmails={userData.coldEmails}
-              onDelete={(id) =>
+              coldEmails={filteredData.coldEmails}
+              onDelete={(id) => {
+                const email = userData.coldEmails.find((e) => e.id === id);
+                softDelete('coldEmail', id, email?.company || 'Cold Email');
+              }}
+              onViewDetails={(email) => setDetailView({ type: 'coldEmail', entry: email })}
+              onToggleResponse={(id) =>
                 setUserData((prev) => ({
                   ...prev,
-                  coldEmails: prev.coldEmails.filter((e) => e.id !== id),
+                  coldEmails: prev.coldEmails.map((e) =>
+                    e.id === id ? { ...e, gotResponse: !e.gotResponse } : e
+                  ),
                 }))
               }
-              onViewDetails={(email) => setDetailView({ type: 'coldEmail', entry: email })}
+              onToggleFollowUpDone={(id) =>
+                setUserData((prev) => ({
+                  ...prev,
+                  coldEmails: prev.coldEmails.map((e) =>
+                    e.id === id ? { ...e, followUpDone: !e.followUpDone } : e
+                  ),
+                }))
+              }
+              onEdit={(email) => {
+                setEditingEntry(email);
+                setActiveModal('coldEmail');
+              }}
             />
           </div>
         );
@@ -195,25 +484,191 @@ export default function Dashboard({ userData, setUserData, onLogout }: Dashboard
       case 'linkedin':
         return (
           <div className="space-y-6">
-            <div className="flex items-center justify-between">
-              <h2 className="text-3xl font-bold">LinkedIn Outreach</h2>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <h2 className="text-2xl sm:text-3xl font-bold">LinkedIn Outreach</h2>
               <button
                 onClick={() => setActiveModal('linkedin')}
-                className="flex items-center gap-2 px-5 py-3 bg-gradient-to-r from-primary to-accent text-white rounded-2xl shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/40 transition-all duration-300 hover:scale-105"
+                className="flex items-center gap-2 px-4 py-2.5 sm:px-5 sm:py-3 bg-gradient-to-r from-primary to-accent text-white rounded-2xl shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/40 transition-all duration-300 hover:scale-105 text-sm sm:text-base w-fit"
               >
                 <Plus className="w-5 h-5" strokeWidth={2.5} />
                 Add Outreach
               </button>
             </div>
+            <DateFilter dateRange={dateRange} onDateRangeChange={setDateRange} />
             <LinkedInOutreachList
-              outreach={userData.linkedInOutreach}
-              onDelete={(id) =>
+              outreach={filteredData.linkedInOutreach}
+              onDelete={(id) => {
+                const item = userData.linkedInOutreach.find((o) => o.id === id);
+                softDelete('linkedin', id, item?.name || item?.company || 'LinkedIn Outreach');
+              }}
+              onViewDetails={(item) => setDetailView({ type: 'linkedin', entry: item })}
+              onToggleResponse={(id) => {
                 setUserData((prev) => ({
                   ...prev,
-                  linkedInOutreach: prev.linkedInOutreach.filter((o) => o.id !== id),
+                  linkedInOutreach: prev.linkedInOutreach.map((o) =>
+                    o.id === id ? { ...o, gotResponse: !o.gotResponse } : o
+                  ),
+                }));
+                showToast(randomPick(quirkyToasts.edit));
+              }}
+              onToggleAlumni={(id) => {
+                setUserData((prev) => ({
+                  ...prev,
+                  linkedInOutreach: prev.linkedInOutreach.map((o) =>
+                    o.id === id ? { ...o, isAlumni: !o.isAlumni } : o
+                  ),
+                }));
+                showToast(randomPick(quirkyToasts.edit));
+              }}
+              onEdit={(item) => {
+                setEditingEntry(item);
+                setActiveModal('linkedin');
+              }}
+            />
+          </div>
+        );
+
+      case 'interviews':
+        return (
+          <div className="space-y-6">
+            <InterviewList
+              interviews={userData.interviews}
+              onOpenAddModal={() => setActiveModal('interview')}
+              onEdit={(interview) => {
+                setEditingEntry(interview);
+                setActiveModal('interview');
+              }}
+              onAdd={(data) => {
+                const newInterview = {
+                  ...data,
+                  id: Date.now().toString(),
+                  createdAt: format(new Date(), 'yyyy-MM-dd'),
+                  updatedAt: format(new Date(), 'yyyy-MM-dd'),
+                };
+                setUserData((prev) => ({
+                  ...prev,
+                  interviews: [newInterview, ...prev.interviews],
+                }));
+                showToast(randomPick(quirkyToasts.addApplication));
+              }}
+              onDelete={(id) => {
+                const interview = userData.interviews.find((i) => i.id === id);
+                softDelete('interview', id, interview?.company || 'Interview');
+              }}
+              onUpdateRound={(interviewId, roundId, updates) => {
+                setUserData((prev) => ({
+                  ...prev,
+                  interviews: prev.interviews.map((i) =>
+                    i.id === interviewId
+                      ? {
+                          ...i,
+                          rounds: i.rounds.map((r) =>
+                            r.id === roundId ? { ...r, ...updates } : r
+                          ),
+                          updatedAt: format(new Date(), 'yyyy-MM-dd'),
+                        }
+                      : i
+                  ),
+                }));
+              }}
+              onUpdateStatus={(id, status) => {
+                setUserData((prev) => ({
+                  ...prev,
+                  interviews: prev.interviews.map((i) =>
+                    i.id === id
+                      ? {
+                          ...i,
+                          status,
+                          updatedAt: format(new Date(), 'yyyy-MM-dd'),
+                        }
+                      : i
+                  ),
+                }));
+              }}
+            />
+          </div>
+        );
+
+      case 'targets':
+        return (
+          <div className="space-y-6">
+            <h2 className="text-2xl sm:text-3xl font-bold">Target Companies</h2>
+            <TargetCompanies
+              companies={userData.targetCompanies}
+              onAdd={(company, role, date) => {
+                setUserData((prev) => ({
+                  ...prev,
+                  targetCompanies: [
+                    {
+                      id: Date.now().toString(),
+                      date: date || format(new Date(), 'yyyy-MM-dd'),
+                      company,
+                      role,
+                      contacts: [],
+                    },
+                    ...prev.targetCompanies,
+                  ],
+                }));
+                showToast(randomPick(quirkyToasts.addCompany));
+              }}
+              onDelete={(id) => {
+                const tc = userData.targetCompanies.find((c) => c.id === id);
+                softDelete('targetCompany', id, tc?.company || 'Target Company');
+              }}
+              onAddContact={(companyId, contact) =>
+                setUserData((prev) => ({
+                  ...prev,
+                  targetCompanies: prev.targetCompanies.map((c) =>
+                    c.id === companyId
+                      ? {
+                          ...c,
+                          contacts: [
+                            ...c.contacts,
+                            { ...contact, id: Date.now().toString() },
+                          ],
+                        }
+                      : c
+                  ),
                 }))
               }
-              onViewDetails={(item) => setDetailView({ type: 'linkedin', entry: item })}
+              onDeleteContact={(companyId, contactId) =>
+                setUserData((prev) => ({
+                  ...prev,
+                  targetCompanies: prev.targetCompanies.map((c) =>
+                    c.id === companyId
+                      ? { ...c, contacts: c.contacts.filter((ct) => ct.id !== contactId) }
+                      : c
+                  ),
+                }))
+              }
+              onUpdateContact={(companyId, contactId, updates) => {
+                setUserData((prev) => ({
+                  ...prev,
+                  targetCompanies: prev.targetCompanies.map((c) =>
+                    c.id === companyId
+                      ? { ...c, contacts: c.contacts.map((ct) => ct.id === contactId ? { ...ct, ...updates } : ct) }
+                      : c
+                  ),
+                }));
+                showToast(randomPick(quirkyToasts.edit));
+              }}
+              onUpdateCompany={(companyId, updates) => {
+                setUserData((prev) => ({
+                  ...prev,
+                  targetCompanies: prev.targetCompanies.map((c) =>
+                    c.id === companyId ? { ...c, ...updates } : c
+                  ),
+                }));
+                showToast(randomPick(quirkyToasts.edit));
+              }}
+              onUpdateNotes={(companyId, notes) =>
+                setUserData((prev) => ({
+                  ...prev,
+                  targetCompanies: prev.targetCompanies.map((c) =>
+                    c.id === companyId ? { ...c, notes } : c
+                  ),
+                }))
+              }
             />
           </div>
         );
@@ -221,11 +676,11 @@ export default function Dashboard({ userData, setUserData, onLogout }: Dashboard
       case 'content':
         return (
           <div className="space-y-6">
-            <div className="flex items-center justify-between">
-              <h2 className="text-3xl font-bold">Content Library</h2>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <h2 className="text-2xl sm:text-3xl font-bold">Content Library</h2>
               <button
                 onClick={() => setActiveModal('content')}
-                className="flex items-center gap-2 px-5 py-3 bg-gradient-to-r from-primary to-accent text-white rounded-2xl shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/40 transition-all duration-300 hover:scale-105"
+                className="flex items-center gap-2 px-4 py-2.5 sm:px-5 sm:py-3 bg-gradient-to-r from-primary to-accent text-white rounded-2xl shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/40 transition-all duration-300 hover:scale-105 text-sm sm:text-base w-fit"
               >
                 <Plus className="w-5 h-5" strokeWidth={2.5} />
                 Add Content
@@ -233,12 +688,19 @@ export default function Dashboard({ userData, setUserData, onLogout }: Dashboard
             </div>
             <ContentLibrary
               content={userData.contentLibrary}
-              onDelete={(id) =>
+              onDelete={(id) => {
+                const item = userData.contentLibrary.find((c) => c.id === id);
+                softDelete('content', id, item?.title || 'Content');
+              }}
+              onUpdate={(id, updates) => {
                 setUserData((prev) => ({
                   ...prev,
-                  contentLibrary: prev.contentLibrary.filter((c) => c.id !== id),
-                }))
-              }
+                  contentLibrary: prev.contentLibrary.map((c) =>
+                    c.id === id ? { ...c, ...updates } : c
+                  ),
+                }));
+                showToast(randomPick(quirkyToasts.edit));
+              }}
             />
           </div>
         );
@@ -246,10 +708,11 @@ export default function Dashboard({ userData, setUserData, onLogout }: Dashboard
       case 'todos':
         return (
           <div className="space-y-6">
-            <h2 className="text-3xl font-bold">To-Do List</h2>
+            <h2 className="text-2xl sm:text-3xl font-bold">To-Do List</h2>
+            <DateFilter dateRange={dateRange} onDateRangeChange={setDateRange} />
             <TodoList
-              todos={userData.todos}
-              onAdd={(text) =>
+              todos={filteredData.todos}
+              onAdd={(text, priority) => {
                 setUserData((prev) => ({
                   ...prev,
                   todos: [
@@ -258,12 +721,15 @@ export default function Dashboard({ userData, setUserData, onLogout }: Dashboard
                       date: format(new Date(), 'yyyy-MM-dd'),
                       text,
                       completed: false,
+                      priority,
                     },
                     ...prev.todos,
                   ],
-                }))
-              }
-              onToggle={(id) =>
+                }));
+                showToast(randomPick(quirkyToasts.addTodo));
+              }}
+              onToggle={(id) => {
+                const todo = userData.todos.find((t) => t.id === id);
                 setUserData((prev) => ({
                   ...prev,
                   todos: prev.todos.map((t) =>
@@ -275,14 +741,130 @@ export default function Dashboard({ userData, setUserData, onLogout }: Dashboard
                         }
                       : t
                   ),
+                }));
+                if (todo && !todo.completed) showToast(randomPick(quirkyToasts.toggle));
+              }}
+              onDelete={(id) => {
+                const todo = userData.todos.find((t) => t.id === id);
+                softDelete('todo', id, todo?.text?.slice(0, 40) || 'To-Do');
+              }}
+              onUpdatePriority={(id, priority) =>
+                setUserData((prev) => ({
+                  ...prev,
+                  todos: prev.todos.map((t) =>
+                    t.id === id ? { ...t, priority } : t
+                  ),
                 }))
               }
+              onEdit={(id, text) => {
+                setUserData((prev) => ({
+                  ...prev,
+                  todos: prev.todos.map((t) =>
+                    t.id === id ? { ...t, text } : t
+                  ),
+                }));
+                showToast(randomPick(quirkyToasts.edit));
+              }}
+              onUpdateDate={(id, date) => {
+                setUserData((prev) => ({
+                  ...prev,
+                  todos: prev.todos.map((t) =>
+                    t.id === id ? { ...t, date, carryForward: false } : t
+                  ),
+                }));
+                showToast(randomPick(quirkyToasts.edit));
+              }}
+              onToggleCarryForward={(id) => {
+                setUserData((prev) => ({
+                  ...prev,
+                  todos: prev.todos.map((t) =>
+                    t.id === id ? { ...t, carryForward: !t.carryForward } : t
+                  ),
+                }));
+              }}
+            />
+          </div>
+        );
+
+      case 'strategy':
+        return (
+          <div className="space-y-6">
+            <h2 className="text-2xl sm:text-3xl font-bold">Strategy</h2>
+            <StrategyBoard
+              items={userData.strategy}
+              onAdd={(text) => {
+                setUserData((prev) => ({
+                  ...prev,
+                  strategy: [
+                    ...prev.strategy,
+                    {
+                      id: Date.now().toString(),
+                      text,
+                      completed: false,
+                      order: prev.strategy.length,
+                    },
+                  ],
+                }));
+                showToast(randomPick(quirkyToasts.addStrategy));
+              }}
               onDelete={(id) =>
                 setUserData((prev) => ({
                   ...prev,
-                  todos: prev.todos.filter((t) => t.id !== id),
+                  strategy: prev.strategy.filter((s) => s.id !== id),
                 }))
               }
+              onToggle={(id) =>
+                setUserData((prev) => ({
+                  ...prev,
+                  strategy: prev.strategy.map((s) =>
+                    s.id === id ? { ...s, completed: !s.completed } : s
+                  ),
+                }))
+              }
+              onEdit={(id, text) => {
+                setUserData((prev) => ({
+                  ...prev,
+                  strategy: prev.strategy.map((s) =>
+                    s.id === id ? { ...s, text } : s
+                  ),
+                }));
+                showToast(randomPick(quirkyToasts.edit));
+              }}
+              onReorder={(items) =>
+                setUserData((prev) => ({
+                  ...prev,
+                  strategy: items,
+                }))
+              }
+            />
+          </div>
+        );
+
+      case 'links':
+        return (
+          <div className="space-y-6">
+            <h2 className="text-2xl sm:text-3xl font-bold">Quick Links</h2>
+            <SavedLinks
+              links={userData.savedLinks}
+              onAdd={({ name, url }) => {
+                setUserData((prev) => ({
+                  ...prev,
+                  savedLinks: [
+                    {
+                      id: Date.now().toString(),
+                      name,
+                      url,
+                      date: format(new Date(), 'yyyy-MM-dd'),
+                    },
+                    ...prev.savedLinks,
+                  ],
+                }));
+                showToast(randomPick(quirkyToasts.addLink));
+              }}
+              onDelete={(id) => {
+                const link = userData.savedLinks.find((l) => l.id === id);
+                softDelete('savedLink', id, link?.name || 'Link');
+              }}
             />
           </div>
         );
@@ -291,7 +873,27 @@ export default function Dashboard({ userData, setUserData, onLogout }: Dashboard
         return (
           <div className="space-y-6">
             <h2 className="text-3xl font-bold">Analytics</h2>
-            <AdvancedStats userData={userData} />
+            <DateFilter dateRange={dateRange} onDateRangeChange={setDateRange} />
+            <AdvancedStats userData={filteredData} />
+          </div>
+        );
+
+      case 'users':
+        return (
+          <div className="space-y-6">
+            <UserManagement currentUser={currentUser} />
+          </div>
+        );
+
+      case 'trash':
+        return (
+          <div className="space-y-6">
+            <h2 className="text-2xl sm:text-3xl font-bold">Trash</h2>
+            <TrashBin
+              items={userData.trash}
+              onRestore={handleRestore}
+              onDeletePermanently={handlePermanentDelete}
+            />
           </div>
         );
 
@@ -302,18 +904,35 @@ export default function Dashboard({ userData, setUserData, onLogout }: Dashboard
 
   return (
     <div className="flex h-screen bg-background-secondary overflow-hidden">
-      {/* Animated background */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -inset-[10px] opacity-30">
-          <div className="absolute top-0 right-1/4 w-96 h-96 bg-primary/20 rounded-full blur-3xl animate-float" />
-          <div className="absolute bottom-0 left-1/4 w-96 h-96 bg-accent/20 rounded-full blur-3xl animate-float" style={{ animationDelay: '2s' }} />
-        </div>
-      </div>
+      <AnimatedBackground />
 
-      <Sidebar activeSection={activeSection} setActiveSection={setActiveSection} onLogout={onLogout} />
+      <Sidebar activeSection={activeSection} setActiveSection={setActiveSection} onLogout={onLogout} collapsed={sidebarCollapsed} onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)} mobileOpen={mobileMenuOpen} onMobileClose={() => setMobileMenuOpen(false)} currentUser={currentUser} />
 
       <main className="flex-1 overflow-y-auto">
-        <div className="max-w-[1600px] mx-auto p-10">
+        {/* Sticky Quick Add Bar */}
+        <div className="sticky top-0 z-30 bg-background/80 backdrop-blur-xl border-b border-border/40">
+          <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-10 py-3 flex items-center gap-2 sm:gap-3 overflow-x-auto">
+            <button
+              onClick={() => setMobileMenuOpen(true)}
+              className="md:hidden p-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-all"
+            >
+              <Menu className="w-5 h-5" strokeWidth={2.5} />
+            </button>
+            <span className="hidden sm:inline text-xs font-semibold text-muted-foreground uppercase tracking-wider mr-2">Quick Add</span>
+            {quickActions.map((action) => (
+              <button
+                key={action.type}
+                onClick={() => setActiveModal(action.type)}
+                className="flex items-center gap-2 px-3 py-2 sm:px-4 bg-card/80 border border-border/50 rounded-xl text-sm font-medium hover:border-primary/50 hover:bg-primary/5 transition-all duration-200 hover:shadow-md hover:shadow-primary/10 shrink-0"
+              >
+                <action.icon className="w-4 h-4 text-primary" strokeWidth={2.5} />
+                <span className="hidden sm:inline">{action.label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="max-w-[1600px] mx-auto px-4 py-6 sm:px-6 sm:py-8 lg:p-10 animate-fade-in-up" key={activeSection}>
           {renderContent()}
         </div>
       </main>
@@ -330,38 +949,107 @@ export default function Dashboard({ userData, setUserData, onLogout }: Dashboard
               ? userData.customFields.linkedInOutreach
               : []
           }
-          onClose={() => setActiveModal(null)}
+          knownCompanies={userData.knownCompanies || []}
+          editingEntry={editingEntry}
+          existingEntries={
+            activeModal === 'application' ? userData.applications :
+            activeModal === 'coldEmail' ? userData.coldEmails :
+            activeModal === 'linkedin' ? userData.linkedInOutreach :
+            activeModal === 'interview' ? userData.interviews :
+            []
+          }
+          onAddKnownCompany={(company) => {
+            if (!userData.knownCompanies?.includes(company)) {
+              setUserData((prev) => ({
+                ...prev,
+                knownCompanies: [...(prev.knownCompanies || []), company],
+              }));
+            }
+          }}
+          onClose={() => {
+            setActiveModal(null);
+            setEditingEntry(null);
+          }}
           onAdd={(data) => {
+            // Add company to knownCompanies if it's new
+            const companyName = data.company?.trim();
+            if (companyName && !userData.knownCompanies?.includes(companyName)) {
+              setUserData((prev) => ({
+                ...prev,
+                knownCompanies: [...(prev.knownCompanies || []), companyName],
+              }));
+            }
             const { customFields, ...baseData } = data;
             const processedData = { ...baseData };
 
             if (activeModal === 'coldEmail' && processedData.isFollowUp) {
               processedData.isFollowUp = processedData.isFollowUp === 'true';
             }
+            if (activeModal === 'linkedin' && processedData.isAlumni) {
+              processedData.isAlumni = processedData.isAlumni === 'true';
+            }
+            if (activeModal === 'application' && processedData.isGreatLakesAlumni) {
+              processedData.isGreatLakesAlumni = processedData.isGreatLakesAlumni === 'true';
+            }
 
-            const newEntry = {
-              ...processedData,
-              id: Date.now().toString(),
-              date: format(new Date(), 'yyyy-MM-dd'),
-              customFields: customFields || {},
-            };
-
-            setUserData((prev) => {
-              switch (activeModal) {
-                case 'application':
-                  return { ...prev, applications: [newEntry as any, ...prev.applications] };
-                case 'coldEmail':
-                  return { ...prev, coldEmails: [newEntry as any, ...prev.coldEmails] };
-                case 'linkedin':
-                  return { ...prev, linkedInOutreach: [newEntry as any, ...prev.linkedInOutreach] };
-                case 'content':
-                  return { ...prev, contentLibrary: [newEntry as any, ...prev.contentLibrary] };
-                default:
-                  return prev;
+            // Handle edit vs add
+            if (editingEntry) {
+              // Update existing entry
+              const collectionKeyMap: Record<string, string> = {
+                application: 'applications',
+                coldEmail: 'coldEmails',
+                linkedin: 'linkedInOutreach',
+                interview: 'interviews',
+              };
+              const collectionKey = collectionKeyMap[activeModal];
+              if (collectionKey) {
+                setUserData((prev) => ({
+                  ...prev,
+                  [collectionKey]: (prev as any)[collectionKey].map((e: any) =>
+                    e.id === editingEntry.id
+                      ? { ...processedData, id: editingEntry.id, createdAt: editingEntry.createdAt, customFields: customFields || {}, updatedAt: format(new Date(), 'yyyy-MM-dd') }
+                      : e
+                  ),
+                }));
               }
-            });
+              showToast(randomPick(quirkyToasts.edit));
+            } else {
+              // Add new entry - use date from form if provided, otherwise today
+              const newEntry = {
+                ...processedData,
+                id: Date.now().toString(),
+                date: processedData.date || format(new Date(), 'yyyy-MM-dd'),
+                customFields: customFields || {},
+              };
 
+              setUserData((prev) => {
+                switch (activeModal) {
+                  case 'application':
+                    return { ...prev, applications: [newEntry as any, ...prev.applications] };
+                  case 'coldEmail':
+                    return { ...prev, coldEmails: [newEntry as any, ...prev.coldEmails] };
+                  case 'linkedin':
+                    return { ...prev, linkedInOutreach: [newEntry as any, ...prev.linkedInOutreach] };
+                  case 'content':
+                    return { ...prev, contentLibrary: [newEntry as any, ...prev.contentLibrary] };
+                  case 'interview':
+                    return { ...prev, interviews: [newEntry as any, ...prev.interviews] };
+                  default:
+                    return prev;
+                }
+              });
+
+              const modalToastMap: Record<string, string[]> = {
+                application: quirkyToasts.addApplication,
+                coldEmail: quirkyToasts.addEmail,
+                linkedin: quirkyToasts.addLinkedin,
+                content: quirkyToasts.addContent,
+                interview: quirkyToasts.addApplication,
+              };
+              showToast(randomPick(modalToastMap[activeModal] || ['✅ Entry added!']));
+            }
             setActiveModal(null);
+            setEditingEntry(null);
           }}
         />
       )}
@@ -382,6 +1070,15 @@ export default function Dashboard({ userData, setUserData, onLogout }: Dashboard
           onAddCustomField={handleAddCustomField}
         />
       )}
+
+      <ConfirmDialog
+        open={!!confirmDelete}
+        title="Delete Item"
+        message={confirmDelete ? `Are you sure you want to delete "${confirmDelete.label}"? It will be moved to trash and can be restored within 7 days.` : ''}
+        confirmLabel="Move to Trash"
+        onConfirm={() => confirmDelete?.action()}
+        onCancel={() => setConfirmDelete(null)}
+      />
     </div>
   );
 }

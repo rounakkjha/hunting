@@ -1,7 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
-import LoginScreen from './components/LoginScreen';
 import Dashboard from './components/Dashboard';
+import Login from './components/Login';
+import { ToastProvider } from './components/Toast';
 import { loadFromBackend, saveToBackend } from './utils/api';
+import { loginUser } from './utils/auth';
 
 export interface CustomField {
   id: string;
@@ -18,7 +20,15 @@ export interface JobApplication {
   source?: string;
   role?: string;
   location?: string;
+  jobUrl?: string;
+  jobId?: string;
+  emailTag?: string;
   customFields?: Record<string, any>;
+  resumeData?: string;
+  resumeName?: string;
+  referrerName?: string;
+  referrerRole?: string;
+  isGreatLakesAlumni?: boolean;
 }
 
 export interface ColdEmail {
@@ -28,7 +38,11 @@ export interface ColdEmail {
   email?: string;
   role?: string;
   isFollowUp?: boolean;
+  gotResponse?: boolean;
+  followUpDone?: boolean;
   customFields?: Record<string, any>;
+  resumeData?: string;
+  resumeName?: string;
 }
 
 export interface LinkedInOutreach {
@@ -37,7 +51,51 @@ export interface LinkedInOutreach {
   name?: string;
   role?: string;
   company?: string;
+  linkedinUrl?: string;
+  isAlumni?: boolean;
+  gotResponse?: boolean;
   customFields?: Record<string, any>;
+}
+
+export type InterviewRoundStatus = 'pending' | 'selected' | 'rejected' | 'scheduled';
+
+export interface InterviewRound {
+  id: string;
+  roundName: string; // e.g., "HR Telephonic", "Technical Round 1", "Technical Round 2", "Managerial", "Final"
+  date?: string;
+  status: InterviewRoundStatus;
+  notes?: string;
+}
+
+export type InterviewStatus = 'active' | 'rejected' | 'offered' | 'accepted' | 'declined';
+
+export interface Interview {
+  id: string;
+  company: string;
+  role: string;
+  status: InterviewStatus;
+  currentRound?: string;
+  rounds: InterviewRound[];
+  sources: {
+    applicationId?: string;
+    coldEmailIds?: string[];
+    linkedinOutreachIds?: string[];
+  };
+  offerDetails?: {
+    salary?: string;
+    offerDate?: string;
+    deadline?: string;
+  };
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface User {
+  id: string;
+  username: string;
+  role: 'user' | 'admin' | 'superadmin';
+  createdAt: string;
 }
 
 export interface ContentItem {
@@ -48,12 +106,58 @@ export interface ContentItem {
   content: string;
 }
 
+export type TodoPriority = 'high' | 'medium' | 'low';
+
 export interface Todo {
   id: string;
   date: string;
   text: string;
   completed: boolean;
   completedDate?: string;
+  priority?: TodoPriority;
+  carryForward?: boolean;
+}
+
+export interface StrategyItem {
+  id: string;
+  text: string;
+  completed: boolean;
+  order: number;
+}
+
+export interface SavedLink {
+  id: string;
+  name: string;
+  url: string;
+  date: string;
+}
+
+export interface CompanyContact {
+  id: string;
+  name: string;
+  email?: string;
+  role?: string;
+  linkedinUrl?: string;
+}
+
+export interface TargetCompany {
+  id: string;
+  date: string;
+  company: string;
+  role?: string;
+  contacts: CompanyContact[];
+  notes?: string;
+  targeted?: boolean;
+}
+
+export type TrashItemType = 'application' | 'coldEmail' | 'linkedin' | 'content' | 'todo' | 'savedLink' | 'targetCompany' | 'interview';
+
+export interface TrashItem {
+  id: string;
+  type: TrashItemType;
+  label: string;
+  deletedAt: string;
+  data: any;
 }
 
 export interface UserData {
@@ -62,6 +166,13 @@ export interface UserData {
   linkedInOutreach: LinkedInOutreach[];
   contentLibrary: ContentItem[];
   todos: Todo[];
+  savedLinks: SavedLink[];
+  targetCompanies: TargetCompany[];
+  strategy: StrategyItem[];
+  interviews: Interview[];
+  trash: TrashItem[];
+  ignoredTargetSuggestions: string[];
+  knownCompanies: string[];
   customFields: {
     applications: CustomField[];
     coldEmails: CustomField[];
@@ -75,6 +186,13 @@ const EMPTY_DATA: UserData = {
   linkedInOutreach: [],
   contentLibrary: [],
   todos: [],
+  savedLinks: [],
+  targetCompanies: [],
+  strategy: [],
+  interviews: [],
+  trash: [],
+  ignoredTargetSuggestions: [],
+  knownCompanies: [],
   customFields: {
     applications: [],
     coldEmails: [],
@@ -92,41 +210,94 @@ function normalizeData(raw: any): UserData {
   raw.linkedInOutreach = raw.linkedInOutreach?.map((o: any) => ({ ...o, customFields: o.customFields || {} })) || [];
   raw.contentLibrary = raw.contentLibrary || [];
   raw.todos = raw.todos || [];
+  raw.savedLinks = raw.savedLinks || [];
+  raw.targetCompanies = raw.targetCompanies || [];
+  raw.strategy = raw.strategy || [];
+  raw.interviews = raw.interviews || [];
+  raw.ignoredTargetSuggestions = raw.ignoredTargetSuggestions || [];
+  raw.knownCompanies = raw.knownCompanies || [];
+  raw.trash = (raw.trash || []).filter((t: any) => {
+    const deletedAt = new Date(t.deletedAt).getTime();
+    const sevenDays = 7 * 24 * 60 * 60 * 1000;
+    return Date.now() - deletedAt < sevenDays;
+  });
   return raw as UserData;
 }
 
 export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [currentUser, setCurrentUser] = useState<string>('');
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [userData, setUserData] = useState<UserData>(EMPTY_DATA);
   const dataLoaded = useRef(false);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Re-auth from localStorage on page load
+  // Restore authentication state from localStorage on mount
   useEffect(() => {
-    const authStatus = localStorage.getItem('huntlog-auth');
-    const savedUser = localStorage.getItem('huntlog-user');
-    if (authStatus === 'true' && savedUser) {
-      setCurrentUser(savedUser);
-      setIsAuthenticated(true);
+    const storedUser = localStorage.getItem('huntlog-auth-user');
+    if (storedUser) {
+      try {
+        const user = JSON.parse(storedUser);
+        setCurrentUser(user);
+        setIsAuthenticated(true);
+      } catch (e) {
+        console.error('[App] Failed to parse stored user:', e);
+        localStorage.removeItem('huntlog-auth-user');
+      }
     }
   }, []);
+
+  const handleLogin = async (username: string, password: string): Promise<boolean> => {
+    const user = await loginUser(username, password);
+    if (user) {
+      setCurrentUser(user);
+      setIsAuthenticated(true);
+      localStorage.setItem('huntlog-auth-user', JSON.stringify(user));
+      return true;
+    }
+    return false;
+  };
+
+  const handleLogout = () => {
+    setCurrentUser(null);
+    setIsAuthenticated(false);
+    setUserData(EMPTY_DATA);
+    dataLoaded.current = false;
+    localStorage.removeItem('huntlog-auth-user');
+  };
+
 
   // Load data when authenticated — prefer backend, fall back to localStorage
   useEffect(() => {
     if (!isAuthenticated || !currentUser) return;
 
     (async () => {
+      console.log('[App] Loading data for user:', currentUser.username);
       const backendData = await loadFromBackend(currentUser);
       if (backendData) {
+        console.log('[App] Loaded from backend:', { applications: backendData.applications?.length || 0 });
         setUserData(normalizeData(backendData));
       } else {
-        const stored = localStorage.getItem(`huntlog-data-${currentUser}`);
+        let stored = localStorage.getItem(`huntlog-data-${currentUser.id}`);
+        
+        // Migration: if no data for new user, check old rounakjha5 data
+        if (!stored && currentUser.id === 'user_rounak') {
+          const oldData = localStorage.getItem('huntlog-data-rounakjha5');
+          if (oldData) {
+            console.log('[App] Migrating data from rounakjha5 to user_rounak');
+            localStorage.setItem(`huntlog-data-${currentUser.id}`, oldData);
+            stored = oldData;
+          }
+        }
+        
+        console.log('[App] Backend empty, checking localStorage:', stored ? 'found data' : 'no data');
         if (stored) {
-          setUserData(normalizeData(JSON.parse(stored)));
+          const parsed = JSON.parse(stored);
+          console.log('[App] Loaded from localStorage:', { applications: parsed.applications?.length || 0 });
+          setUserData(normalizeData(parsed));
         }
       }
       dataLoaded.current = true;
+      console.log('[App] Data load complete');
     })();
 
     return () => {
@@ -136,13 +307,19 @@ export default function App() {
 
   // Persist to localStorage immediately + backend with a short debounce
   useEffect(() => {
-    if (!isAuthenticated || !dataLoaded.current || !currentUser) return;
+    if (!isAuthenticated || !currentUser) return;
+    if (!dataLoaded.current) {
+      console.log('[App] Data not loaded yet, skipping save');
+      return;
+    }
 
-    localStorage.setItem(`huntlog-data-${currentUser}`, JSON.stringify(userData));
+    console.log('[App] Saving data to localStorage and backend...', { applications: userData.applications.length });
+    localStorage.setItem(`huntlog-data-${currentUser.id}`, JSON.stringify(userData));
 
     if (saveTimer.current) clearTimeout(saveTimer.current);
     saveTimer.current = setTimeout(() => {
       saveToBackend(currentUser, userData);
+      console.log('[App] Saved to backend');
     }, 400);
 
     return () => {
@@ -150,29 +327,17 @@ export default function App() {
     };
   }, [userData, isAuthenticated, currentUser]);
 
-  const handleLogin = (username: string, password: string) => {
-    if (username === 'rounakjha5' && password === '1744') {
-      setCurrentUser(username);
-      setIsAuthenticated(true);
-      localStorage.setItem('huntlog-auth', 'true');
-      localStorage.setItem('huntlog-user', username);
-      return true;
-    }
-    return false;
-  };
-
-  const handleLogout = () => {
-    setIsAuthenticated(false);
-    setCurrentUser('');
-    setUserData(EMPTY_DATA);
-    dataLoaded.current = false;
-    localStorage.removeItem('huntlog-auth');
-    localStorage.removeItem('huntlog-user');
-  };
-
   if (!isAuthenticated) {
-    return <LoginScreen onLogin={handleLogin} />;
+    return (
+      <ToastProvider>
+        <Login onLogin={handleLogin} />
+      </ToastProvider>
+    );
   }
 
-  return <Dashboard userData={userData} setUserData={setUserData} onLogout={handleLogout} />;
+  return (
+    <ToastProvider>
+      <Dashboard userData={userData} setUserData={setUserData} onLogout={handleLogout} currentUser={currentUser} />
+    </ToastProvider>
+  );
 }

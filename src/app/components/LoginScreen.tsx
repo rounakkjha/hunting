@@ -40,7 +40,7 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
               </div>
             </div>
           </div>
-          <h1 className="text-4xl mb-3 bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
+          <h1 className="text-3xl sm:text-4xl mb-3 bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
             Welcome to HuntLog
           </h1>
           <p className="text-muted-foreground flex items-center justify-center gap-2">

@@ -39,21 +39,21 @@ export default function DetailViewModal({
       return (
         <div className="space-y-2">
           <label className="text-sm text-foreground/90">
-            {label} {required && <span className="text-[#00b4d8]">*</span>}
+            {label} {required && <span className="text-[var(--primary)]">*</span>}
           </label>
           {fieldType === 'textarea' ? (
             <textarea
               value={editValue}
               onChange={(e) => setFormData({ ...formData, [field]: e.target.value })}
               rows={4}
-              className="w-full px-4 py-2.5 bg-background/50 rounded-lg border border-border/60 focus:ring-2 focus:ring-[#00b4d8]/50 focus:border-[#00b4d8]/50 outline-none transition-all resize-none"
+              className="w-full px-4 py-2.5 bg-background/50 rounded-lg border border-border/60 focus:ring-2 focus:ring-[var(--primary)]/50 focus:border-[var(--primary)]/50 outline-none transition-all resize-none"
             />
           ) : (
             <input
               type={fieldType}
               value={editValue}
               onChange={(e) => setFormData({ ...formData, [field]: e.target.value })}
-              className="w-full px-4 py-2.5 bg-background/50 rounded-lg border border-border/60 focus:ring-2 focus:ring-[#00b4d8]/50 focus:border-[#00b4d8]/50 outline-none transition-all"
+              className="w-full px-4 py-2.5 bg-background/50 rounded-lg border border-border/60 focus:ring-2 focus:ring-[var(--primary)]/50 focus:border-[var(--primary)]/50 outline-none transition-all"
               required={required}
             />
           )}
@@ -78,7 +78,7 @@ export default function DetailViewModal({
       return (
         <div key={field.id} className="space-y-2">
           <label className="text-sm text-foreground/90">
-            {field.name} {field.required && <span className="text-[#00b4d8]">*</span>}
+            {field.name} {field.required && <span className="text-[var(--primary)]">*</span>}
           </label>
           {field.type === 'textarea' ? (
             <textarea
@@ -90,7 +90,7 @@ export default function DetailViewModal({
                 })
               }
               rows={4}
-              className="w-full px-4 py-2.5 bg-background/50 rounded-lg border border-border/60 focus:ring-2 focus:ring-[#00b4d8]/50 focus:border-[#00b4d8]/50 outline-none transition-all resize-none"
+              className="w-full px-4 py-2.5 bg-background/50 rounded-lg border border-border/60 focus:ring-2 focus:ring-[var(--primary)]/50 focus:border-[var(--primary)]/50 outline-none transition-all resize-none"
               required={field.required}
             />
           ) : field.type === 'select' ? (
@@ -102,7 +102,7 @@ export default function DetailViewModal({
                   customFields: { ...formData.customFields, [field.id]: e.target.value },
                 })
               }
-              className="w-full px-4 py-2.5 bg-background/50 rounded-lg border border-border/60 focus:ring-2 focus:ring-[#00b4d8]/50 focus:border-[#00b4d8]/50 outline-none transition-all"
+              className="w-full px-4 py-2.5 bg-background/50 rounded-lg border border-border/60 focus:ring-2 focus:ring-[var(--primary)]/50 focus:border-[var(--primary)]/50 outline-none transition-all"
               required={field.required}
             >
               <option value="">Select...</option>
@@ -122,7 +122,7 @@ export default function DetailViewModal({
                   customFields: { ...formData.customFields, [field.id]: e.target.value },
                 })
               }
-              className="w-full px-4 py-2.5 bg-background/50 rounded-lg border border-border/60 focus:ring-2 focus:ring-[#00b4d8]/50 focus:border-[#00b4d8]/50 outline-none transition-all"
+              className="w-full px-4 py-2.5 bg-background/50 rounded-lg border border-border/60 focus:ring-2 focus:ring-[var(--primary)]/50 focus:border-[var(--primary)]/50 outline-none transition-all"
               required={field.required}
             />
           )}
@@ -151,6 +151,52 @@ export default function DetailViewModal({
             {renderField('Role', app.role, 'role', 'text')}
             {renderField('Source', app.source, 'source', 'text')}
             {renderField('Location', app.location, 'location', 'text')}
+            {isEditing ? (
+              <div className="space-y-2 md:col-span-2">
+                <label className="text-sm text-foreground/90">Tags</label>
+                <div className="flex flex-wrap gap-2">
+                  {[
+                    { value: '', label: 'No Tag', icon: '—' },
+                    { value: 'need_to_mail', label: 'Need to Mail', icon: '📧' },
+                    { value: 'already_mailed', label: 'Already Mailed', icon: '✅' },
+                    { value: 'ghost', label: 'Ghost', icon: '👻' },
+                  ].map((tag) => (
+                    <button
+                      key={tag.value}
+                      type="button"
+                      onClick={() => setFormData({ ...formData, emailTag: tag.value })}
+                      className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold border transition-all duration-200 ${
+                        ((formData as any).emailTag || '') === tag.value
+                          ? 'bg-primary/10 border-primary/50 text-primary ring-2 ring-primary/20'
+                          : 'bg-background/50 border-border/60 text-muted-foreground hover:border-primary/30 hover:text-foreground'
+                      }`}
+                    >
+                      <span>{tag.icon}</span>
+                      {tag.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ) : app.emailTag ? (
+              <div className="space-y-1">
+                <p className="text-xs text-muted-foreground">Tags</p>
+                {app.emailTag === 'need_to_mail' && (
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 rounded text-xs font-medium">
+                    📧 Need to Mail
+                  </span>
+                )}
+                {app.emailTag === 'already_mailed' && (
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 rounded text-xs font-medium">
+                    ✅ Already Mailed
+                  </span>
+                )}
+                {app.emailTag === 'ghost' && (
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20 rounded text-xs font-medium">
+                    👻 Ghost
+                  </span>
+                )}
+              </div>
+            ) : null}
           </>
         );
 
@@ -163,13 +209,13 @@ export default function DetailViewModal({
             {renderField('Email', email.email, 'email', 'email')}
             {renderField('Role', email.role, 'role', 'text')}
             {isEditing && (
-              <div className="flex items-center gap-3 p-4 bg-amber-500/5 rounded-lg border border-amber-500/20">
+              <div className="flex items-center gap-3 p-4 bg-indigo-500/5 rounded-lg border border-indigo-500/20">
                 <input
                   type="checkbox"
                   id="followUp-edit"
                   checked={(formData as ColdEmail).isFollowUp || false}
                   onChange={(e) => setFormData({ ...formData, isFollowUp: e.target.checked })}
-                  className="w-4 h-4 rounded border-border/60 text-[#00b4d8] focus:ring-2 focus:ring-[#00b4d8]/50 cursor-pointer"
+                  className="w-4 h-4 rounded border-border/60 text-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/50 cursor-pointer"
                 />
                 <label htmlFor="followUp-edit" className="text-sm text-foreground/90 cursor-pointer flex-1">
                   This is a follow-up email
@@ -208,15 +254,15 @@ export default function DetailViewModal({
 
   return (
     <>
-      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-6 z-50">
-        <div className="bg-gradient-to-br from-card to-card/50 rounded-2xl border border-border/60 shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden">
+      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center sm:p-6 z-50 animate-fade-in" onClick={onClose}>
+        <div className="bg-gradient-to-br from-card to-card/50 rounded-t-2xl sm:rounded-2xl border border-border/60 shadow-2xl w-full sm:max-w-2xl max-h-[85vh] sm:max-h-[90vh] overflow-hidden animate-scale-in" onClick={(e) => e.stopPropagation()}>
           <div className="flex items-center justify-between px-6 py-5 border-b border-border/40">
             <h3 className="text-lg">{titles[type]}</h3>
             <div className="flex items-center gap-2">
               {!isEditing ? (
                 <button
                   onClick={() => setIsEditing(true)}
-                  className="flex items-center gap-2 px-4 py-2 bg-[#00b4d8] text-white rounded-lg hover:shadow-lg hover:shadow-[#00b4d8]/25 transition-all text-sm"
+                  className="flex items-center gap-2 px-4 py-2 bg-[var(--primary)] text-white rounded-lg hover:shadow-lg hover:shadow-[var(--primary)]/25 transition-all text-sm"
                 >
                   <Edit2 className="w-4 h-4" strokeWidth={2.5} />
                   Edit
@@ -224,7 +270,7 @@ export default function DetailViewModal({
               ) : (
                 <button
                   onClick={handleSave}
-                  className="flex items-center gap-2 px-4 py-2 bg-green-500 text-white rounded-lg hover:shadow-lg transition-all text-sm"
+                  className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:shadow-lg hover:shadow-primary/25 transition-all text-sm"
                 >
                   <Save className="w-4 h-4" strokeWidth={2.5} />
                   Save
