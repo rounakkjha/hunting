@@ -29,6 +29,20 @@ export async function loginUser(username: string, password: string): Promise<Use
   }
 }
 
+export async function checkUserExists(username: string): Promise<boolean> {
+  try {
+    const { data, error } = await supabase
+      .from('users')
+      .select('id')
+      .eq('username', username)
+      .single();
+
+    return !error && !!data;
+  } catch {
+    return false;
+  }
+}
+
 export async function createUser(username: string, password: string, role: 'user' | 'admin' = 'user'): Promise<User | null> {
   try {
     const id = `user_${Date.now()}_${username}`;

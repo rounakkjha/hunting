@@ -3,7 +3,7 @@ import Dashboard from './components/Dashboard';
 import Login from './components/Login';
 import { ToastProvider } from './components/Toast';
 import { loadFromBackend, saveToBackend } from './utils/api';
-import { loginUser } from './utils/auth';
+import { loginUser, checkUserExists } from './utils/auth';
 
 export interface CustomField {
   id: string;
@@ -246,6 +246,10 @@ export default function App() {
     }
   }, []);
 
+  const handleCheckUser = async (username: string): Promise<boolean> => {
+    return await checkUserExists(username);
+  };
+
   const handleLogin = async (username: string, password: string): Promise<boolean> => {
     const user = await loginUser(username, password);
     if (user) {
@@ -330,7 +334,7 @@ export default function App() {
   if (!isAuthenticated) {
     return (
       <ToastProvider>
-        <Login onLogin={handleLogin} />
+        <Login onLogin={handleLogin} onCheckUser={handleCheckUser} />
       </ToastProvider>
     );
   }

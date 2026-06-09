@@ -1,16 +1,21 @@
-import { useState, useEffect } from 'react';
-import { Briefcase, Lock, User, Loader2, TrendingUp, Target, CheckCircle, Zap, ArrowRight, HelpCircle } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Briefcase, Lock, User, Loader2, TrendingUp, Target, CheckCircle, Zap, ArrowRight, HelpCircle, ExternalLink, ArrowLeft } from 'lucide-react';
 
 interface LoginProps {
   onLogin: (username: string, password: string) => Promise<boolean>;
+  onCheckUser: (username: string) => Promise<boolean>;
 }
 
-export default function Login({ onLogin }: LoginProps) {
+type Step = 'username' | 'password' | 'not_found';
+
+export default function Login({ onLogin, onCheckUser }: LoginProps) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [step, setStep] = useState<Step>('username');
   const [currentFeature, setCurrentFeature] = useState(0);
+  const passwordRef = useRef<HTMLInputElement>(null);
 
   const features = [
     { icon: Target, title: 'Track Applications', desc: 'Never miss an opportunity' },
@@ -26,23 +31,56 @@ export default function Login({ onLogin }: LoginProps) {
     return () => clearInterval(interval);
   }, []);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  useEffect(() => {
+    if (step === 'password' && passwordRef.current) {
+      passwordRef.current.focus();
+    }
+  }, [step]);
+
+  const handleUsernameSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!username || !password) {
-      setError('Please enter both username and password');
+    if (!username.trim()) {
+      setError('Please enter your username');
       return;
     }
 
     setIsLoading(true);
     setError('');
 
-    const success = await onLogin(username, password);
-    
-    if (!success) {
-      setError('Invalid username or password');
+    const exists = await onCheckUser(username.trim());
+
+    if (exists) {
+      setStep('password');
+    } else {
+      setStep('not_found');
     }
-    
+
     setIsLoading(false);
+  };
+
+  const handlePasswordSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!password) {
+      setError('Please enter your password');
+      return;
+    }
+
+    setIsLoading(true);
+    setError('');
+
+    const success = await onLogin(username.trim(), password);
+
+    if (!success) {
+      setError('Incorrect password. Please try again.');
+    }
+
+    setIsLoading(false);
+  };
+
+  const handleBack = () => {
+    setStep('username');
+    setPassword('');
+    setError('');
   };
 
   return (
@@ -133,79 +171,166 @@ export default function Login({ onLogin }: LoginProps) {
               </div>
             </div>
 
-            {/* Title */}
-            <div className="text-center mb-8">
-              <h1 className="text-3xl font-bold mb-2">Welcome Back</h1>
-              <p className="text-muted-foreground">Sign in to continue your journey</p>
-            </div>
-
-            {/* Form */}
-            <form onSubmit={handleSubmit} className="space-y-5">
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-foreground/80">Username</label>
-                <div className="relative group">
-                  <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
-                  <input
-                    type="text"
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                    className="w-full pl-10 pr-4 py-3 rounded-xl border border-border/60 bg-background/50 focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all outline-none group-hover:border-border/80"
-                    placeholder="Enter your username"
-                    autoComplete="username"
-                  />
+            {/* Step: Username */}
+            {step === 'username' && (
+              <>
+                <div className="text-center mb-8">
+                  <h1 className="text-3xl font-bold mb-2">Sign in to HuntLog</h1>
+                  <p className="text-muted-foreground">Enter your username to get started</p>
                 </div>
-              </div>
 
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-foreground/80">Password</label>
-                <div className="relative group">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
-                  <input
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="w-full pl-10 pr-4 py-3 rounded-xl border border-border/60 bg-background/50 focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all outline-none group-hover:border-border/80"
-                    placeholder="Enter your password"
-                    autoComplete="current-password"
-                  />
+                <form onSubmit={handleUsernameSubmit} className="space-y-5">
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-foreground/80">Username</label>
+                    <div className="relative group">
+                      <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
+                      <input
+                        type="text"
+                        value={username}
+                        onChange={(e) => setUsername(e.target.value)}
+                        className="w-full pl-10 pr-4 py-3 rounded-xl border border-border/60 bg-background/50 focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all outline-none group-hover:border-border/80"
+                        placeholder="Enter your username"
+                        autoComplete="username"
+                        autoFocus
+                      />
+                    </div>
+                  </div>
+
+                  {error && (
+                    <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-500 text-sm animate-shake">
+                      {error}
+                    </div>
+                  )}
+
+                  <button
+                    type="submit"
+                    disabled={isLoading}
+                    className="w-full py-3 px-4 bg-gradient-to-r from-primary to-accent text-white rounded-xl font-medium shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/40 transition-all duration-300 hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center justify-center gap-2 group"
+                  >
+                    {isLoading ? (
+                      <>
+                        <Loader2 className="w-5 h-5 animate-spin" />
+                        Checking...
+                      </>
+                    ) : (
+                      <>
+                        Continue
+                        <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                      </>
+                    )}
+                  </button>
+                </form>
+              </>
+            )}
+
+            {/* Step: Password (user exists) */}
+            {step === 'password' && (
+              <>
+                <div className="text-center mb-8">
+                  <h1 className="text-3xl font-bold mb-2">Welcome back, {username}!</h1>
+                  <p className="text-muted-foreground">Enter your password to continue</p>
                 </div>
-              </div>
 
-              {error && (
-                <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-500 text-sm animate-shake">
-                  {error}
+                <form onSubmit={handlePasswordSubmit} className="space-y-5">
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-foreground/80">Password</label>
+                    <div className="relative group">
+                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
+                      <input
+                        ref={passwordRef}
+                        type="password"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        className="w-full pl-10 pr-4 py-3 rounded-xl border border-border/60 bg-background/50 focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all outline-none group-hover:border-border/80"
+                        placeholder="Enter your password"
+                        autoComplete="current-password"
+                      />
+                    </div>
+                  </div>
+
+                  {error && (
+                    <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-500 text-sm animate-shake">
+                      {error}
+                    </div>
+                  )}
+
+                  <button
+                    type="submit"
+                    disabled={isLoading}
+                    className="w-full py-3 px-4 bg-gradient-to-r from-primary to-accent text-white rounded-xl font-medium shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/40 transition-all duration-300 hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center justify-center gap-2 group"
+                  >
+                    {isLoading ? (
+                      <>
+                        <Loader2 className="w-5 h-5 animate-spin" />
+                        Signing in...
+                      </>
+                    ) : (
+                      <>
+                        Sign In
+                        <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                      </>
+                    )}
+                  </button>
+
+                  <div className="flex items-center justify-between">
+                    <button
+                      type="button"
+                      onClick={handleBack}
+                      className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-primary transition-colors"
+                    >
+                      <ArrowLeft className="w-4 h-4" />
+                      Use a different username
+                    </button>
+                    <a
+                      href="mailto:rounakjha5@gmail.com?subject=HuntLog%20Password%20Reset%20Request"
+                      className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-primary transition-colors"
+                    >
+                      <HelpCircle className="w-4 h-4" />
+                      Forgot password?
+                    </a>
+                  </div>
+                </form>
+              </>
+            )}
+
+            {/* Step: User not found */}
+            {step === 'not_found' && (
+              <>
+                <div className="text-center mb-6">
+                  <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-amber-500/10 border border-amber-500/20 mb-4">
+                    <User className="w-8 h-8 text-amber-500" />
+                  </div>
+                  <h1 className="text-2xl font-bold mb-2">Username not found</h1>
+                  <p className="text-muted-foreground">
+                    The username <span className="font-semibold text-foreground">"{username}"</span> is not registered on HuntLog.
+                  </p>
                 </div>
-              )}
 
-              <button
-                type="submit"
-                disabled={isLoading}
-                className="w-full py-3 px-4 bg-gradient-to-r from-primary to-accent text-white rounded-xl font-medium shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/40 transition-all duration-300 hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center justify-center gap-2 group"
-              >
-                {isLoading ? (
-                  <>
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                    Signing in...
-                  </>
-                ) : (
-                  <>
-                    Sign In
-                    <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-                  </>
-                )}
-              </button>
+                <div className="p-4 rounded-2xl bg-primary/5 border border-primary/20 space-y-3 mb-6">
+                  <p className="text-sm text-foreground/80 text-center">
+                    HuntLog is currently in early access. To get an invite, please visit our website and request access.
+                  </p>
+                  <a
+                    href="https://rounakjha.vercel.app/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full py-3 px-4 bg-gradient-to-r from-primary to-accent text-white rounded-xl font-medium shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/40 transition-all duration-300 hover:scale-[1.02] flex items-center justify-center gap-2 group"
+                  >
+                    Get Early Access
+                    <ExternalLink className="w-4 h-4 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+                  </a>
+                </div>
 
-              {/* Forgot Password */}
-              <div className="text-center">
-                <a
-                  href="mailto:rounakjha5@gmail.com?subject=HuntLog%20Password%20Reset%20Request"
-                  className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-primary transition-colors"
+                <button
+                  type="button"
+                  onClick={handleBack}
+                  className="w-full py-3 px-4 rounded-xl border border-border/60 text-foreground/80 font-medium hover:bg-background/80 transition-all flex items-center justify-center gap-2"
                 >
-                  <HelpCircle className="w-4 h-4" />
-                  Forgot your password? Contact admin
-                </a>
-              </div>
-            </form>
+                  <ArrowLeft className="w-4 h-4" />
+                  Try a different username
+                </button>
+              </>
+            )}
 
             {/* Footer */}
             <div className="mt-8 text-center text-sm text-muted-foreground">
