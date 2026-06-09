@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Briefcase, Lock, User, Loader2, TrendingUp, Target, CheckCircle, Zap, ArrowRight } from 'lucide-react';
+import { Briefcase, Lock, User, Loader2, TrendingUp, Target, CheckCircle, Zap, ArrowRight, HelpCircle } from 'lucide-react';
 
 interface LoginProps {
   onLogin: (username: string, password: string) => Promise<boolean>;
@@ -194,6 +194,17 @@ export default function Login({ onLogin }: LoginProps) {
                   </>
                 )}
               </button>
+
+              {/* Forgot Password */}
+              <div className="text-center">
+                <a
+                  href="mailto:rounakjha5@gmail.com?subject=HuntLog%20Password%20Reset%20Request"
+                  className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-primary transition-colors"
+                >
+                  <HelpCircle className="w-4 h-4" />
+                  Forgot your password? Contact admin
+                </a>
+              </div>
             </form>
 
             {/* Footer */}

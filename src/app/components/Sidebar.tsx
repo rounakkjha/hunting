@@ -18,6 +18,7 @@ import {
   X,
   Users,
   Briefcase,
+  Key,
 } from 'lucide-react';
 import ThemeToggle from './ThemeToggle';
 
@@ -36,14 +37,15 @@ interface SidebarProps {
   activeSection: string;
   setActiveSection: (section: string) => void;
   onLogout: () => void;
+  onChangePassword?: () => void;
   collapsed: boolean;
   onToggleCollapse: () => void;
   mobileOpen?: boolean;
   onMobileClose?: () => void;
-  currentUser?: { role: string } | null;
+  currentUser?: { role: string; username?: string } | null;
 }
 
-export default function Sidebar({ activeSection, setActiveSection, onLogout, collapsed, onToggleCollapse, mobileOpen, onMobileClose, currentUser }: SidebarProps) {
+export default function Sidebar({ activeSection, setActiveSection, onLogout, onChangePassword, collapsed, onToggleCollapse, mobileOpen, onMobileClose, currentUser }: SidebarProps) {
   const handleNavClick = (section: string) => {
     setActiveSection(section);
     onMobileClose?.();
@@ -99,34 +101,41 @@ export default function Sidebar({ activeSection, setActiveSection, onLogout, col
         >
           <PanelLeftOpen className="w-5 h-5" strokeWidth={2} />
         </button>
-        <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-primary to-accent flex items-center justify-center shadow-md mb-4">
-          <Target className="w-4 h-4 text-white" strokeWidth={2.5} />
+        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center shadow-lg shadow-primary/30 mb-6">
+          <Target className="w-5 h-5 text-white" strokeWidth={2.5} />
         </div>
-        <nav className="flex-1 flex flex-col items-center gap-1">
-          {allItems.map((item) => {
-            const Icon = item.icon;
-            const isActive = activeSection === item.id;
-            return (
-              <div key={item.id} className="relative group/tooltip">
-                <button
-                  onClick={() => handleNavClick(item.id)}
-                  className={`p-2.5 rounded-xl transition-all duration-200 ${
-                    isActive
-                      ? 'bg-primary text-white shadow-lg shadow-primary/25'
-                      : 'text-muted-foreground hover:text-foreground hover:bg-background/60'
-                  }`}
-                >
-                  <Icon className="w-5 h-5" strokeWidth={2.5} />
-                </button>
-                {/* Tooltip */}
-                <span className="absolute left-full ml-2 top-1/2 -translate-y-1/2 px-2 py-1 bg-card text-foreground text-xs font-medium rounded-lg border border-border/60 shadow-lg opacity-0 group-hover/tooltip:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-[100]">
-                  {item.label}
-                </span>
-              </div>
-            );
-          })}
+        <nav className="flex-1 flex flex-col items-center gap-2 py-2">
+          {menuGroups.map((group, groupIndex) => (
+            <div key={group.title || 'top'} className="flex flex-col items-center gap-2">
+              {groupIndex > 0 && (
+                <div className="w-6 h-px bg-border/40 my-1" />
+              )}
+              {group.items.map((item) => {
+                const Icon = item.icon;
+                const isActive = activeSection === item.id;
+                return (
+                  <div key={item.id} className="relative group/tooltip">
+                    <button
+                      onClick={() => handleNavClick(item.id)}
+                      className={`p-3 rounded-xl transition-all duration-200 ${
+                        isActive
+                          ? 'bg-primary text-white shadow-lg shadow-primary/30 scale-105'
+                          : 'text-muted-foreground hover:text-foreground hover:bg-background/60'
+                      }`}
+                    >
+                      <Icon className="w-5 h-5" strokeWidth={2.5} />
+                    </button>
+                    {/* Tooltip */}
+                    <span className="absolute left-full ml-3 top-1/2 -translate-y-1/2 px-3 py-1.5 bg-card text-foreground text-xs font-medium rounded-lg border border-border/60 shadow-xl opacity-0 group-hover/tooltip:opacity-100 transition-all pointer-events-none whitespace-nowrap z-[100]">
+                      {item.label}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          ))}
         </nav>
-        <div className="flex flex-col items-center gap-2 pt-4 border-t border-border/50">
+        <div className="flex flex-col items-center gap-3 py-4 border-t border-border/50">
           <ThemeToggle />
         </div>
       </aside>
@@ -213,6 +222,13 @@ export default function Sidebar({ activeSection, setActiveSection, onLogout, col
             <p className="font-semibold text-sm truncate">{currentUser?.username || 'User'}</p>
             <p className="text-xs text-muted-foreground capitalize">{currentUser?.role || 'user'}</p>
           </div>
+          <button
+            onClick={onChangePassword}
+            className="p-2 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-lg transition-all"
+            title="Change Password"
+          >
+            <Key className="w-4 h-4" />
+          </button>
           <button
             onClick={onLogout}
             className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-all"

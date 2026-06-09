@@ -9,8 +9,11 @@ import {
   Menu,
   Building2,
   Briefcase,
+  Key,
+  X,
 } from 'lucide-react';
 import type { UserData, JobApplication, ColdEmail, LinkedInOutreach, CustomField, TrashItem, TrashItemType, User, Interview, InterviewStatus, InterviewRoundStatus } from '../App';
+import { updateUserPassword } from '../utils/auth';
 import Sidebar from './Sidebar';
 import TimeGreeting from './TimeGreeting';
 import AdvancedStats from './AdvancedStats';
@@ -150,6 +153,10 @@ export default function Dashboard({ userData, setUserData, onLogout, currentUser
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<{ action: () => void; label: string } | null>(null);
+  const [showChangePassword, setShowChangePassword] = useState(false);
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [passwordError, setPasswordError] = useState('');
   const { showToast } = useToast();
 
   const softDelete = (type: TrashItemType, id: string, label: string) => {
@@ -199,6 +206,40 @@ export default function Dashboard({ userData, setUserData, onLogout, currentUser
       trash: prev.trash.filter((t) => t.id !== trashId),
     }));
     showToast(randomPick(quirkyToasts.permanentDelete));
+  };
+
+  const handleChangePassword = async () => {
+    setPasswordError('');
+    
+    if (!newPassword.trim()) {
+      setPasswordError('Please enter a new password');
+      return;
+    }
+    
+    if (newPassword !== confirmPassword) {
+      setPasswordError('Passwords do not match');
+      return;
+    }
+    
+    if (newPassword.length < 4) {
+      setPasswordError('Password must be at least 4 characters');
+      return;
+    }
+    
+    if (!currentUser?.id) {
+      setPasswordError('User not found');
+      return;
+    }
+    
+    const success = await updateUserPassword(currentUser.id, newPassword.trim());
+    if (success) {
+      showToast('Password changed successfully!');
+      setShowChangePassword(false);
+      setNewPassword('');
+      setConfirmPassword('');
+    } else {
+      setPasswordError('Failed to change password. Please try again.');
+    }
   };
 
   // Carry forward overdue incomplete todos to today
@@ -906,7 +947,7 @@ export default function Dashboard({ userData, setUserData, onLogout, currentUser
     <div className="flex h-screen bg-background-secondary overflow-hidden">
       <AnimatedBackground />
 
-      <Sidebar activeSection={activeSection} setActiveSection={setActiveSection} onLogout={onLogout} collapsed={sidebarCollapsed} onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)} mobileOpen={mobileMenuOpen} onMobileClose={() => setMobileMenuOpen(false)} currentUser={currentUser} />
+      <Sidebar activeSection={activeSection} setActiveSection={setActiveSection} onLogout={onLogout} onChangePassword={() => setShowChangePassword(true)} collapsed={sidebarCollapsed} onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)} mobileOpen={mobileMenuOpen} onMobileClose={() => setMobileMenuOpen(false)} currentUser={currentUser} />
 
       <main className="flex-1 overflow-y-auto">
         {/* Sticky Quick Add Bar */}
@@ -1079,6 +1120,83 @@ export default function Dashboard({ userData, setUserData, onLogout, currentUser
         onConfirm={() => confirmDelete?.action()}
         onCancel={() => setConfirmDelete(null)}
       />
+
+      {/* Change Password Modal */}
+      {showChangePassword && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className="relative bg-card border border-border/50 rounded-3xl shadow-2xl p-6 w-full max-w-md">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-primary/10 rounded-xl">
+                  <Key className="w-5 h-5 text-primary" />
+                </div>
+                <h3 className="text-xl font-bold">Change Password</h3>
+              </div>
+              <button
+                onClick={() => {
+                  setShowChangePassword(false);
+                  setNewPassword('');
+                  setConfirmPassword('');
+                  setPasswordError('');
+                }}
+                className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-all"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm font-medium mb-1.5 block">New Password</label>
+                <input
+                  type="password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  className="w-full px-4 py-3 rounded-xl border border-border/60 bg-background/60 focus:ring-2 focus:ring-primary/30 focus:border-primary/40 outline-none transition-all"
+                  placeholder="Enter new password"
+                />
+              </div>
+
+              <div>
+                <label className="text-sm font-medium mb-1.5 block">Confirm Password</label>
+                <input
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  className="w-full px-4 py-3 rounded-xl border border-border/60 bg-background/60 focus:ring-2 focus:ring-primary/30 focus:border-primary/40 outline-none transition-all"
+                  placeholder="Confirm new password"
+                />
+              </div>
+
+              {passwordError && (
+                <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-500 text-sm">
+                  {passwordError}
+                </div>
+              )}
+
+              <div className="flex gap-3 pt-2">
+                <button
+                  onClick={handleChangePassword}
+                  className="flex-1 py-3 bg-gradient-to-r from-primary to-accent text-white rounded-xl font-medium hover:shadow-lg transition-all"
+                >
+                  Change Password
+                </button>
+                <button
+                  onClick={() => {
+                    setShowChangePassword(false);
+                    setNewPassword('');
+                    setConfirmPassword('');
+                    setPasswordError('');
+                  }}
+                  className="px-4 py-3 bg-muted text-muted-foreground rounded-xl font-medium hover:bg-muted/80 transition-all"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

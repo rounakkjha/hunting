@@ -105,3 +105,16 @@ export async function updateUserRole(userId: string, role: 'user' | 'admin' | 's
     return false;
   }
 }
+
+export async function updateUserPassword(userId: string, newPassword: string): Promise<boolean> {
+  try {
+    const { error } = await supabase
+      .from('users')
+      .update({ password_hash: newPassword })
+      .eq('id', userId);
+
+    return !error;
+  } catch {
+    return false;
+  }
+}

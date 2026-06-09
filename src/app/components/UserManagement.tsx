@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Users, Plus, Trash2, Shield, User as UserIcon, Crown, Key } from 'lucide-react';
-import { getAllUsers, createUser, deleteUser, updateUserRole } from '../utils/auth';
+import { Users, Plus, Trash2, Shield, User as UserIcon, Crown, Key, Pencil } from 'lucide-react';
+import { getAllUsers, createUser, deleteUser, updateUserRole, updateUserPassword } from '../utils/auth';
 import type { User } from '../App';
 
 interface UserManagementProps {
@@ -14,6 +14,8 @@ export default function UserManagement({ currentUser }: UserManagementProps) {
   const [newPassword, setNewPassword] = useState('');
   const [newRole, setNewRole] = useState<'user' | 'admin'>('user');
   const [loading, setLoading] = useState(false);
+  const [editingPasswordUser, setEditingPasswordUser] = useState<string | null>(null);
+  const [editPasswordValue, setEditPasswordValue] = useState('');
 
   const isSuperAdmin = currentUser?.role === 'superadmin';
 
@@ -64,6 +66,19 @@ export default function UserManagement({ currentUser }: UserManagementProps) {
     const success = await updateUserRole(userId, newRole);
     if (success) {
       loadUsers();
+    }
+  };
+
+  const handleUpdatePassword = async (userId: string) => {
+    if (!editPasswordValue.trim()) return;
+    
+    const success = await updateUserPassword(userId, editPasswordValue.trim());
+    if (success) {
+      alert('Password updated successfully');
+      setEditingPasswordUser(null);
+      setEditPasswordValue('');
+    } else {
+      alert('Failed to update password');
     }
   };
 
@@ -191,25 +206,65 @@ export default function UserManagement({ currentUser }: UserManagementProps) {
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    {user.role !== 'superadmin' && (
-                      <select
-                        value={user.role}
-                        onChange={(e) => handleUpdateRole(user.id, e.target.value as 'user' | 'admin' | 'superadmin')}
-                        className="px-3 py-1.5 bg-background/60 rounded-lg border border-border/60 text-xs focus:ring-2 focus:ring-primary/30 outline-none"
-                      >
-                        <option value="user">User</option>
-                        <option value="admin">Admin</option>
-                        <option value="superadmin">Superadmin</option>
-                      </select>
-                    )}
-                    {user.id !== currentUser?.id && (
-                      <button
-                        onClick={() => handleDeleteUser(user.id)}
-                        className="p-2 text-red-400 hover:bg-red-500/10 rounded-lg border border-transparent hover:border-red-500/20 transition-all"
-                        title="Delete user"
-                      >
-                        <Trash2 className="w-4 h-4" strokeWidth={2.5} />
-                      </button>
+                    {editingPasswordUser === user.id ? (
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="password"
+                          value={editPasswordValue}
+                          onChange={(e) => setEditPasswordValue(e.target.value)}
+                          placeholder="New password"
+                          className="px-3 py-1.5 bg-background/60 rounded-lg border border-border/60 text-xs focus:ring-2 focus:ring-primary/30 outline-none w-32"
+                          autoFocus
+                        />
+                        <button
+                          onClick={() => handleUpdatePassword(user.id)}
+                          className="px-3 py-1.5 bg-primary text-white rounded-lg text-xs hover:bg-primary/90 transition-all"
+                        >
+                          Save
+                        </button>
+                        <button
+                          onClick={() => {
+                            setEditingPasswordUser(null);
+                            setEditPasswordValue('');
+                          }}
+                          className="px-3 py-1.5 bg-muted text-muted-foreground rounded-lg text-xs hover:bg-muted/80 transition-all"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    ) : (
+                      <>
+                        <button
+                          onClick={() => {
+                            setEditingPasswordUser(user.id);
+                            setEditPasswordValue('');
+                          }}
+                          className="p-2 text-amber-400 hover:bg-amber-500/10 rounded-lg border border-transparent hover:border-amber-500/20 transition-all"
+                          title="Change password"
+                        >
+                          <Key className="w-4 h-4" strokeWidth={2.5} />
+                        </button>
+                        {user.role !== 'superadmin' && (
+                          <select
+                            value={user.role}
+                            onChange={(e) => handleUpdateRole(user.id, e.target.value as 'user' | 'admin' | 'superadmin')}
+                            className="px-3 py-1.5 bg-background/60 rounded-lg border border-border/60 text-xs focus:ring-2 focus:ring-primary/30 outline-none"
+                          >
+                            <option value="user">User</option>
+                            <option value="admin">Admin</option>
+                            <option value="superadmin">Superadmin</option>
+                          </select>
+                        )}
+                        {user.id !== currentUser?.id && (
+                          <button
+                            onClick={() => handleDeleteUser(user.id)}
+                            className="p-2 text-red-400 hover:bg-red-500/10 rounded-lg border border-transparent hover:border-red-500/20 transition-all"
+                            title="Delete user"
+                          >
+                            <Trash2 className="w-4 h-4" strokeWidth={2.5} />
+                          </button>
+                        )}
+                      </>
                     )}
                   </div>
                 </div>
