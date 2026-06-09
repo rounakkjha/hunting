@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Briefcase, Lock, User, Loader2, TrendingUp, Target, CheckCircle, Zap, ArrowRight, HelpCircle, ExternalLink, ArrowLeft } from 'lucide-react';
+import { Lock, User, Loader2, TrendingUp, Target, CheckCircle, Zap, ArrowRight, HelpCircle, ExternalLink, ArrowLeft } from 'lucide-react';
 
 interface LoginProps {
   onLogin: (username: string, password: string) => Promise<boolean>;
@@ -114,7 +114,7 @@ export default function Login({ onLogin, onCheckUser }: LoginProps) {
           <div className="space-y-4">
             <div className="flex items-center gap-4">
               <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary to-accent flex items-center justify-center shadow-2xl shadow-primary/50 animate-bounce" style={{ animationDuration: '3s' }}>
-                <Briefcase className="w-8 h-8 text-white" strokeWidth={2.5} />
+                <Target className="w-8 h-8 text-white" strokeWidth={2.5} />
               </div>
               <div>
                 <h1 className="text-5xl font-bold bg-gradient-to-r from-primary via-purple-400 to-accent bg-clip-text text-transparent">
@@ -167,7 +167,7 @@ export default function Login({ onLogin, onCheckUser }: LoginProps) {
             {/* Mobile Logo */}
             <div className="lg:hidden flex justify-center mb-8">
               <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary to-accent flex items-center justify-center shadow-lg shadow-primary/25 animate-bounce" style={{ animationDuration: '3s' }}>
-                <Briefcase className="w-8 h-8 text-white" strokeWidth={2.5} />
+                <Target className="w-8 h-8 text-white" strokeWidth={2.5} />
               </div>
             </div>
 
