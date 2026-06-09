@@ -281,13 +281,10 @@ export default function Login({ onLogin, onCheckUser }: LoginProps) {
                       <ArrowLeft className="w-4 h-4" />
                       Use a different username
                     </button>
-                    <a
-                      href="mailto:rounakjha5@gmail.com?subject=HuntLog%20Password%20Reset%20Request"
-                      className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-primary transition-colors"
-                    >
+                    <span className="inline-flex items-center gap-1.5 text-sm text-muted-foreground">
                       <HelpCircle className="w-4 h-4" />
-                      Forgot password?
-                    </a>
+                      Forgot password? Mail us at <span className="text-primary font-medium">rounakjha5@gmail.com</span>
+                    </span>
                   </div>
                 </form>
               </>
