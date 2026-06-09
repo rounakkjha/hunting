@@ -82,14 +82,14 @@ export default function Login({ onLogin }: LoginProps) {
                 <h1 className="text-5xl font-bold bg-gradient-to-r from-primary via-purple-400 to-accent bg-clip-text text-transparent">
                   HuntLog
                 </h1>
-                <p className="text-lg text-muted-foreground mt-1">Your Job Search Companion</p>
+                <p className="text-lg text-white/80 mt-1">Your Job Search Companion</p>
               </div>
             </div>
           </div>
 
           {/* Feature Showcase */}
           <div className="space-y-6">
-            <h2 className="text-2xl font-semibold text-foreground/90">Everything you need to land your dream job</h2>
+            <h2 className="text-2xl font-semibold text-white">Everything you need to land your dream job</h2>
             <div className="space-y-4">
               {features.map((feature, index) => (
                 <div
@@ -109,30 +109,15 @@ export default function Login({ onLogin }: LoginProps) {
                   </div>
                   <div>
                     <h3 className={`font-semibold transition-all ${
-                      index === currentFeature ? 'text-foreground' : 'text-muted-foreground'
+                      index === currentFeature ? 'text-white' : 'text-white/60'
                     }`}>{feature.title}</h3>
-                    <p className="text-sm text-muted-foreground">{feature.desc}</p>
+                    <p className="text-sm text-white/70">{feature.desc}</p>
                   </div>
                 </div>
               ))}
             </div>
           </div>
 
-          {/* Stats */}
-          <div className="grid grid-cols-3 gap-4 pt-8">
-            <div className="text-center p-4 rounded-2xl bg-background/10 border border-border/20">
-              <div className="text-3xl font-bold text-primary">500+</div>
-              <div className="text-sm text-muted-foreground">Applications</div>
-            </div>
-            <div className="text-center p-4 rounded-2xl bg-background/10 border border-border/20">
-              <div className="text-3xl font-bold text-accent">85%</div>
-              <div className="text-sm text-muted-foreground">Response Rate</div>
-            </div>
-            <div className="text-center p-4 rounded-2xl bg-background/10 border border-border/20">
-              <div className="text-3xl font-bold text-purple-400">2x</div>
-              <div className="text-sm text-muted-foreground">Faster Hiring</div>
-            </div>
-          </div>
         </div>
 
         {/* Right Side - Login Form */}

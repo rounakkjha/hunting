@@ -1,4 +1,4 @@
-import { FileText, Mail, MessageSquare, CheckSquare, TrendingUp, Briefcase, CheckCircle2, LucideIcon } from 'lucide-react';
+import { FileText, Mail, MessageSquare, CheckSquare, Briefcase, LucideIcon } from 'lucide-react';
 import type { UserData } from '../App';
 
 interface StatsOverviewProps {
@@ -38,18 +38,8 @@ export default function StatsOverview({ userData, onNavigate }: StatsOverviewPro
       icon: Mail,
       color: 'from-indigo-400 to-indigo-500',
       textColor: 'text-indigo-400',
-      subtitle: `${initialEmails} initial, ${followUpEmails} follow-ups`,
+      subtitle: `${initialEmails} initial, ${followUpsDone}/${followUpEmails} follow-ups done`,
       gradient: 'from-indigo-400/10 to-indigo-500/5',
-      section: 'emails',
-    },
-    {
-      label: 'Follow-ups Done',
-      value: followUpsDone,
-      icon: CheckCircle2,
-      color: 'from-emerald-500 to-emerald-600',
-      textColor: 'text-emerald-500',
-      subtitle: followUpEmails > 0 ? `${Math.round((followUpsDone / followUpEmails) * 100)}% completion` : undefined,
-      gradient: 'from-emerald-500/10 to-emerald-600/5',
       section: 'emails',
     },
     {
@@ -79,22 +69,10 @@ export default function StatsOverview({ userData, onNavigate }: StatsOverviewPro
       textColor: 'text-indigo-500',
       gradient: 'from-indigo-500/10 to-indigo-600/5',
     },
-    {
-      label: 'Total Activity',
-      value:
-        userData.applications.length +
-        userData.coldEmails.length +
-        userData.linkedInOutreach.length +
-        (userData.interviews?.length || 0),
-      icon: TrendingUp,
-      color: 'from-indigo-600 to-indigo-700',
-      textColor: 'text-indigo-600',
-      gradient: 'from-indigo-600/10 to-indigo-700/5',
-    },
   ];
 
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-4">
+    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
       {stats.map((stat, index) => (
         <div
           key={stat.label}
