@@ -11,6 +11,14 @@ import {
   Briefcase,
   Key,
   X,
+  Rocket,
+  Flame,
+  Target,
+  TrendingUp,
+  Sparkles,
+  ChevronRight,
+  BarChart3,
+  CheckCircle,
 } from 'lucide-react';
 import type { UserData, JobApplication, ColdEmail, LinkedInOutreach, CustomField, TrashItem, TrashItemType, User, Interview, InterviewStatus, InterviewRoundStatus } from '../App';
 import { updateUserPassword } from '../utils/auth';
@@ -331,24 +339,144 @@ export default function Dashboard({ userData, setUserData, onLogout, currentUser
 
   const renderContent = () => {
     switch (activeSection) {
-      case 'dashboard':
+      case 'dashboard': {
+        const totalActivity = userData.applications.length + userData.coldEmails.length + userData.linkedInOutreach.length;
+        const isNewUser = totalActivity === 0;
+
         return (
-          <div className="space-y-6 sm:space-y-8">
-            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 sm:gap-6">
+          <div className="space-y-5 sm:space-y-8">
+            <div className={`flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-6 ${isNewUser ? 'hidden sm:flex' : ''}`}>
               <TimeGreeting />
               <DateFilter dateRange={dateRange} onDateRangeChange={setDateRange} />
             </div>
-            <GlobalSearch
-              userData={userData}
-              onNavigate={setActiveSection}
-              onViewApplication={(app) => setDetailView({ type: 'application', entry: app })}
-              onViewColdEmail={(email) => setDetailView({ type: 'coldEmail', entry: email })}
-              onViewLinkedIn={(outreach) => setDetailView({ type: 'linkedin', entry: outreach })}
-            />
-            <StatsOverview userData={filteredData} onNavigate={setActiveSection} />
-            <AdvancedStats userData={filteredData} />
+
+            {/* Desktop: always show search + stats + charts */}
+            <div className="hidden sm:block space-y-8">
+              <GlobalSearch
+                userData={userData}
+                onNavigate={setActiveSection}
+                onViewApplication={(app) => setDetailView({ type: 'application', entry: app })}
+                onViewColdEmail={(email) => setDetailView({ type: 'coldEmail', entry: email })}
+                onViewLinkedIn={(outreach) => setDetailView({ type: 'linkedin', entry: outreach })}
+              />
+              <StatsOverview userData={filteredData} onNavigate={setActiveSection} />
+              <AdvancedStats userData={filteredData} />
+            </div>
+
+            {/* Mobile: conditional content */}
+            <div className="sm:hidden space-y-5">
+              {isNewUser ? (
+                /* New user onboarding - rich & exciting */
+                <div className="space-y-4">
+                  {/* Hero motivation card */}
+                  <div className="relative overflow-hidden bg-gradient-to-br from-primary/10 via-accent/5 to-purple-500/10 border border-primary/20 rounded-2xl p-5">
+                    <div className="absolute top-2 right-2 opacity-10">
+                      <Rocket className="w-20 h-20 text-primary" />
+                    </div>
+                    <div className="relative space-y-2">
+                      <div className="flex items-center gap-2">
+                        <Flame className="w-5 h-5 text-orange-500" />
+                        <span className="text-xs font-bold text-orange-500 uppercase tracking-wider">Day 1</span>
+                      </div>
+                      <h2 className="text-lg font-bold">Your job hunt starts here</h2>
+                      <p className="text-xs text-muted-foreground leading-relaxed">
+                        HuntLog tracks every application, email, and connection — so you never lose momentum.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Quick actions - prominent & action-oriented */}
+                  <div className="grid grid-cols-2 gap-3">
+                    {quickActions.slice(0, 4).map((action) => (
+                      <button
+                        key={action.type}
+                        onClick={() => setActiveModal(action.type)}
+                        className="relative flex flex-col items-start gap-3 p-4 bg-card border border-border/50 rounded-2xl hover:border-primary/40 hover:shadow-md hover:shadow-primary/10 transition-all active:scale-95 group text-left"
+                      >
+                        <div className="flex items-center justify-between w-full">
+                          <div className={`p-2.5 rounded-xl bg-gradient-to-br ${action.color} shadow-sm`}>
+                            <action.icon className="w-4 h-4 text-white" strokeWidth={2.5} />
+                          </div>
+                          <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+                            <Plus className="w-3.5 h-3.5 text-primary" strokeWidth={2.5} />
+                          </div>
+                        </div>
+                        <div>
+                          <span className="text-xs font-semibold text-foreground/90 block">{action.label}</span>
+                          <span className="text-[10px] text-muted-foreground">Tap to add</span>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* What you'll unlock */}
+                  <div className="bg-card border border-border/50 rounded-2xl p-4 space-y-3">
+                    <div className="flex items-center gap-2">
+                      <Sparkles className="w-4 h-4 text-primary" />
+                      <span className="text-xs font-bold uppercase tracking-wider text-primary">What you'll unlock</span>
+                    </div>
+                    <div className="space-y-2.5">
+                      {[
+                        { icon: BarChart3, text: 'Weekly activity charts & trends', color: 'text-indigo-500' },
+                        { icon: Target, text: 'Response rate tracking', color: 'text-cyan-500' },
+                        { icon: TrendingUp, text: 'Activity streaks & momentum', color: 'text-emerald-500' },
+                        { icon: CheckCircle, text: 'Follow-up reminders', color: 'text-purple-500' },
+                      ].map((item, i) => (
+                        <div key={i} className="flex items-center gap-3">
+                          <item.icon className={`w-4 h-4 ${item.color} shrink-0`} strokeWidth={2.5} />
+                          <span className="text-xs text-foreground/70">{item.text}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Pro tip */}
+                  <div className="flex items-start gap-3 p-3.5 bg-amber-500/5 border border-amber-500/20 rounded-2xl">
+                    <div className="p-1.5 bg-amber-500/10 rounded-lg shrink-0 mt-0.5">
+                      <Rocket className="w-3.5 h-3.5 text-amber-600" strokeWidth={2.5} />
+                    </div>
+                    <div>
+                      <p className="text-[11px] font-semibold text-amber-700 dark:text-amber-400 mb-0.5">Pro tip</p>
+                      <p className="text-[11px] text-muted-foreground leading-relaxed">
+                        People who track their job search are 3x more likely to land interviews. Start with just one entry today!
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                /* Returning user with data */
+                <div className="space-y-5">
+                  {/* Quick action grid */}
+                  <div className="grid grid-cols-4 gap-2">
+                    {quickActions.slice(0, 4).map((action) => (
+                      <button
+                        key={action.type}
+                        onClick={() => setActiveModal(action.type)}
+                        className="flex flex-col items-center gap-1.5 py-3 bg-card border border-border/50 rounded-xl hover:border-primary/40 transition-all active:scale-95"
+                      >
+                        <div className={`p-2 rounded-lg bg-gradient-to-br ${action.color}`}>
+                          <action.icon className="w-3.5 h-3.5 text-white" strokeWidth={2.5} />
+                        </div>
+                        <span className="text-[10px] font-medium text-muted-foreground leading-tight text-center">{action.label.split(' ')[0]}</span>
+                      </button>
+                    ))}
+                  </div>
+
+                  <StatsOverview userData={filteredData} onNavigate={setActiveSection} />
+
+                  <button
+                    onClick={() => setActiveSection('analytics')}
+                    className="w-full py-3 px-4 bg-card border border-border/50 rounded-2xl text-sm font-medium text-muted-foreground hover:text-foreground hover:border-primary/30 transition-all flex items-center justify-center gap-2"
+                  >
+                    <Plus className="w-4 h-4 rotate-45" />
+                    View Full Analytics
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         );
+      }
 
       case 'applications':
         return (
@@ -950,7 +1078,7 @@ export default function Dashboard({ userData, setUserData, onLogout, currentUser
       <Sidebar activeSection={activeSection} setActiveSection={setActiveSection} onLogout={onLogout} onChangePassword={() => setShowChangePassword(true)} collapsed={sidebarCollapsed} onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)} mobileOpen={mobileMenuOpen} onMobileClose={() => setMobileMenuOpen(false)} currentUser={currentUser} />
 
       <main className="flex-1 overflow-y-auto">
-        {/* Sticky Quick Add Bar */}
+        {/* Sticky Top Bar */}
         <div className="sticky top-0 z-30 bg-background/80 backdrop-blur-xl border-b border-border/40">
           <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-10 py-3 flex items-center gap-2 sm:gap-3 overflow-x-auto">
             <button
@@ -959,12 +1087,13 @@ export default function Dashboard({ userData, setUserData, onLogout, currentUser
             >
               <Menu className="w-5 h-5" strokeWidth={2.5} />
             </button>
+            {/* Desktop/Tablet quick actions */}
             <span className="hidden sm:inline text-xs font-semibold text-muted-foreground uppercase tracking-wider mr-2">Quick Add</span>
             {quickActions.map((action) => (
               <button
                 key={action.type}
                 onClick={() => setActiveModal(action.type)}
-                className="flex items-center gap-2 px-3 py-2 sm:px-4 bg-card/80 border border-border/50 rounded-xl text-sm font-medium hover:border-primary/50 hover:bg-primary/5 transition-all duration-200 hover:shadow-md hover:shadow-primary/10 shrink-0"
+                className="hidden sm:flex items-center gap-2 px-3 py-2 sm:px-4 bg-card/80 border border-border/50 rounded-xl text-sm font-medium hover:border-primary/50 hover:bg-primary/5 transition-all duration-200 hover:shadow-md hover:shadow-primary/10 shrink-0"
               >
                 <action.icon className="w-4 h-4 text-primary" strokeWidth={2.5} />
                 <span className="hidden sm:inline">{action.label}</span>

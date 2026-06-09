@@ -52,7 +52,6 @@ export default function DateFilter({ dateRange, onDateRangeChange }: DateFilterP
   const presets = [
     { label: 'Today', fn: getToday },
     { label: 'Yesterday', fn: getYesterday },
-    { label: 'Tomorrow', fn: getTomorrow },
     { label: 'This Week', fn: getThisWeek },
     { label: 'This Month', fn: getThisMonth },
     { label: 'All Time', fn: getAllTime },
@@ -93,7 +92,7 @@ export default function DateFilter({ dateRange, onDateRangeChange }: DateFilterP
         <button
           onClick={() => setShowCustom(!showCustom)}
           className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold transition-all duration-200 ${
-            showCustom || (dateRange.label !== 'Today' && dateRange.label !== 'Yesterday' && dateRange.label !== 'Tomorrow' && dateRange.label !== 'This Week' && dateRange.label !== 'This Month' && dateRange.label !== 'All Time')
+            showCustom || (dateRange.label !== 'Today' && dateRange.label !== 'Yesterday' && dateRange.label !== 'This Week' && dateRange.label !== 'This Month' && dateRange.label !== 'All Time')
               ? 'bg-gradient-to-r from-primary to-accent text-white shadow-lg shadow-primary/25'
               : 'bg-background/60 text-muted-foreground hover:text-foreground hover:bg-background/80 border border-border/50 hover:border-primary/30'
           }`}
