@@ -82,20 +82,25 @@ export default function QuickAddModal({ type, customFields = [], knownCompanies 
 
     switch (type) {
       case 'application':
-        return existingEntries.some((e: any) => 
-          e.company?.toLowerCase() === data.company?.toLowerCase()
+        // Same company + same role = duplicate
+        // Same company + different role = NOT duplicate (can apply to multiple roles at same company)
+        return existingEntries.some((e: any) =>
+          e.company?.toLowerCase() === data.company?.toLowerCase() &&
+          e.role?.toLowerCase() === data.role?.toLowerCase()
         );
       case 'coldEmail':
-        return existingEntries.some((e: any) => 
-          e.company?.toLowerCase() === data.company?.toLowerCase()
+        // Check by person name only (different people at same company is allowed)
+        return existingEntries.some((e: any) =>
+          e.name?.toLowerCase() === data.name?.toLowerCase()
         );
       case 'linkedin':
-        return existingEntries.some((e: any) => 
-          e.name?.toLowerCase() === data.name?.toLowerCase() ||
-          e.company?.toLowerCase() === data.company?.toLowerCase()
+        // Check by person name only (different people at same company is allowed)
+        return existingEntries.some((e: any) =>
+          e.name?.toLowerCase() === data.name?.toLowerCase()
         );
       case 'interview':
-        return existingEntries.some((e: any) => 
+        // Same company + same role = duplicate
+        return existingEntries.some((e: any) =>
           e.company?.toLowerCase() === data.company?.toLowerCase() &&
           e.role?.toLowerCase() === data.role?.toLowerCase()
         );
@@ -762,8 +767,14 @@ export default function QuickAddModal({ type, customFields = [], knownCompanies 
             </div>
             <h3 className="text-lg font-semibold">Duplicate Entry Detected</h3>
           </div>
-          <p className="text-sm text-muted-foreground mb-6">
-            An entry with similar details already exists. Do you want to continue adding this entry?
+          <p className="text-sm text-muted-foreground mb-2">
+            {type === 'application' && 'An application for this company and role already exists.'}
+            {type === 'interview' && 'An interview for this company and role already exists.'}
+            {type === 'coldEmail' && `You've already emailed ${pendingSubmit?.name || 'this person'}.`}
+            {type === 'linkedin' && `You're already connected with ${pendingSubmit?.name || 'this person'}.`}
+          </p>
+          <p className="text-sm text-muted-foreground/70 mb-6">
+            Do you want to continue adding this entry?
           </p>
           <div className="flex gap-3">
             <button
