@@ -4,6 +4,7 @@ import type { UserData } from '../App';
 interface StatsOverviewProps {
   userData: UserData;
   onNavigate?: (section: string) => void;
+  isLoading?: boolean;
 }
 
 interface Stat {
@@ -17,10 +18,23 @@ interface Stat {
   section?: string;
 }
 
-export default function StatsOverview({ userData, onNavigate }: StatsOverviewProps) {
+export default function StatsOverview({ userData, onNavigate, isLoading }: StatsOverviewProps) {
   const initialEmails = userData.coldEmails.filter((e) => !e.isFollowUp).length;
   const followUpEmails = userData.coldEmails.filter((e) => e.isFollowUp).length;
   const followUpsDone = userData.coldEmails.filter((e) => e.followUpDone).length;
+
+  // Skeleton card component
+  const SkeletonCard = () => (
+    <div className="relative bg-card border border-border/50 rounded-2xl shadow-sm overflow-hidden">
+      <div className="relative p-3.5 sm:p-5">
+        <div className="flex items-center gap-2 sm:gap-3 mb-2 sm:mb-3">
+          <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-muted animate-pulse" />
+          <div className="w-16 h-3 rounded bg-muted animate-pulse" />
+        </div>
+        <div className="w-12 h-8 sm:w-16 sm:h-10 rounded bg-muted animate-pulse" />
+      </div>
+    </div>
+  );
 
   const stats: Stat[] = [
     {
@@ -70,6 +84,23 @@ export default function StatsOverview({ userData, onNavigate }: StatsOverviewPro
       gradient: 'from-indigo-500/10 to-indigo-600/5',
     },
   ];
+
+  // Show skeleton UI while loading
+  if (isLoading) {
+    return (
+      <div className="space-y-3">
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <div className="w-4 h-4 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+          Loading your data...
+        </div>
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5 sm:gap-4">
+          {[...Array(5)].map((_, index) => (
+            <SkeletonCard key={index} />
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5 sm:gap-4">

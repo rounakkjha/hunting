@@ -151,6 +151,37 @@ export default function DetailViewModal({
             {renderField('Role', app.role, 'role', 'text')}
             {renderField('Source', app.source, 'source', 'text')}
             {renderField('Location', app.location, 'location', 'text')}
+            {renderField('Job URL', app.jobUrl, 'jobUrl', 'url')}
+            {renderField('Job ID', app.jobId, 'jobId', 'text')}
+            {renderField('Referrer Name', app.referrerName, 'referrerName', 'text')}
+            {renderField('Referrer Role', app.referrerRole, 'referrerRole', 'text')}
+            {!isEditing && app.resumeName && (
+              <div className="space-y-1">
+                <p className="text-xs text-muted-foreground">Resume</p>
+                <p className="text-sm">{app.resumeName}</p>
+              </div>
+            )}
+            {isEditing ? (
+              <div className="flex items-center gap-3 p-4 bg-indigo-500/5 rounded-lg border border-indigo-500/20">
+                <input
+                  type="checkbox"
+                  id="alumni-edit"
+                  checked={(formData as JobApplication).isGreatLakesAlumni || false}
+                  onChange={(e) => setFormData({ ...formData, isGreatLakesAlumni: e.target.checked })}
+                  className="w-4 h-4 rounded border-border/60 text-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/50 cursor-pointer"
+                />
+                <label htmlFor="alumni-edit" className="text-sm text-foreground/90 cursor-pointer flex-1">
+                  Great Lakes Alumni
+                </label>
+              </div>
+            ) : app.isGreatLakesAlumni ? (
+              <div className="space-y-1">
+                <p className="text-xs text-muted-foreground">Alumni Status</p>
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-indigo-500/10 text-indigo-500 border border-indigo-500/20 rounded text-xs">
+                  Great Lakes Alumni
+                </span>
+              </div>
+            ) : null}
             {isEditing ? (
               <div className="space-y-2 md:col-span-2">
                 <label className="text-sm text-foreground/90">Tags</label>
@@ -208,27 +239,78 @@ export default function DetailViewModal({
             {renderField('Company', email.company, 'company', 'text', true)}
             {renderField('Email', email.email, 'email', 'email')}
             {renderField('Role', email.role, 'role', 'text')}
-            {isEditing && (
-              <div className="flex items-center gap-3 p-4 bg-indigo-500/5 rounded-lg border border-indigo-500/20">
-                <input
-                  type="checkbox"
-                  id="followUp-edit"
-                  checked={(formData as ColdEmail).isFollowUp || false}
-                  onChange={(e) => setFormData({ ...formData, isFollowUp: e.target.checked })}
-                  className="w-4 h-4 rounded border-border/60 text-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/50 cursor-pointer"
-                />
-                <label htmlFor="followUp-edit" className="text-sm text-foreground/90 cursor-pointer flex-1">
-                  This is a follow-up email
-                </label>
+            {!isEditing && email.resumeName && (
+              <div className="space-y-1">
+                <p className="text-xs text-muted-foreground">Resume</p>
+                <p className="text-sm">{email.resumeName}</p>
               </div>
             )}
-            {!isEditing && email.isFollowUp && (
-              <div className="space-y-1">
-                <p className="text-xs text-muted-foreground">Type</p>
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-amber-500/10 text-amber-400 border border-amber-500/20 rounded text-xs">
-                  Follow-up Email
-                </span>
-              </div>
+            {isEditing ? (
+              <>
+                <div className="flex items-center gap-3 p-4 bg-indigo-500/5 rounded-lg border border-indigo-500/20">
+                  <input
+                    type="checkbox"
+                    id="followUp-edit"
+                    checked={(formData as ColdEmail).isFollowUp || false}
+                    onChange={(e) => setFormData({ ...formData, isFollowUp: e.target.checked })}
+                    className="w-4 h-4 rounded border-border/60 text-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/50 cursor-pointer"
+                  />
+                  <label htmlFor="followUp-edit" className="text-sm text-foreground/90 cursor-pointer flex-1">
+                    This is a follow-up email
+                  </label>
+                </div>
+                <div className="flex items-center gap-3 p-4 bg-emerald-500/5 rounded-lg border border-emerald-500/20">
+                  <input
+                    type="checkbox"
+                    id="gotResponse-edit"
+                    checked={(formData as ColdEmail).gotResponse || false}
+                    onChange={(e) => setFormData({ ...formData, gotResponse: e.target.checked })}
+                    className="w-4 h-4 rounded border-border/60 text-emerald-500 focus:ring-2 focus:ring-emerald-500/50 cursor-pointer"
+                  />
+                  <label htmlFor="gotResponse-edit" className="text-sm text-foreground/90 cursor-pointer flex-1">
+                    Got Response
+                  </label>
+                </div>
+                <div className="flex items-center gap-3 p-4 bg-amber-500/5 rounded-lg border border-amber-500/20">
+                  <input
+                    type="checkbox"
+                    id="followUpDone-edit"
+                    checked={(formData as ColdEmail).followUpDone || false}
+                    onChange={(e) => setFormData({ ...formData, followUpDone: e.target.checked })}
+                    className="w-4 h-4 rounded border-border/60 text-amber-500 focus:ring-2 focus:ring-amber-500/50 cursor-pointer"
+                  />
+                  <label htmlFor="followUpDone-edit" className="text-sm text-foreground/90 cursor-pointer flex-1">
+                    Follow-up Done
+                  </label>
+                </div>
+              </>
+            ) : (
+              <>
+                {email.isFollowUp && (
+                  <div className="space-y-1">
+                    <p className="text-xs text-muted-foreground">Type</p>
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-amber-500/10 text-amber-400 border border-amber-500/20 rounded text-xs">
+                      Follow-up Email
+                    </span>
+                  </div>
+                )}
+                {email.gotResponse && (
+                  <div className="space-y-1">
+                    <p className="text-xs text-muted-foreground">Response</p>
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 rounded text-xs">
+                      Received Response
+                    </span>
+                  </div>
+                )}
+                {email.followUpDone && (
+                  <div className="space-y-1">
+                    <p className="text-xs text-muted-foreground">Follow-up</p>
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-amber-500/10 text-amber-500 border border-amber-500/20 rounded text-xs">
+                      Follow-up Completed
+                    </span>
+                  </div>
+                )}
+              </>
             )}
           </>
         );
@@ -241,6 +323,54 @@ export default function DetailViewModal({
             {renderField('Name', linkedin.name, 'name', 'text')}
             {renderField('Role', linkedin.role, 'role', 'text')}
             {renderField('Company', linkedin.company, 'company', 'text')}
+            {renderField('LinkedIn URL', linkedin.linkedinUrl, 'linkedinUrl', 'url')}
+            {isEditing ? (
+              <>
+                <div className="flex items-center gap-3 p-4 bg-purple-500/5 rounded-lg border border-purple-500/20">
+                  <input
+                    type="checkbox"
+                    id="isAlumni-edit"
+                    checked={(formData as LinkedInOutreach).isAlumni || false}
+                    onChange={(e) => setFormData({ ...formData, isAlumni: e.target.checked })}
+                    className="w-4 h-4 rounded border-border/60 text-purple-500 focus:ring-2 focus:ring-purple-500/50 cursor-pointer"
+                  />
+                  <label htmlFor="isAlumni-edit" className="text-sm text-foreground/90 cursor-pointer flex-1">
+                    Alumni Connection
+                  </label>
+                </div>
+                <div className="flex items-center gap-3 p-4 bg-emerald-500/5 rounded-lg border border-emerald-500/20">
+                  <input
+                    type="checkbox"
+                    id="gotResponse-edit-linkedin"
+                    checked={(formData as LinkedInOutreach).gotResponse || false}
+                    onChange={(e) => setFormData({ ...formData, gotResponse: e.target.checked })}
+                    className="w-4 h-4 rounded border-border/60 text-emerald-500 focus:ring-2 focus:ring-emerald-500/50 cursor-pointer"
+                  />
+                  <label htmlFor="gotResponse-edit-linkedin" className="text-sm text-foreground/90 cursor-pointer flex-1">
+                    Got Response
+                  </label>
+                </div>
+              </>
+            ) : (
+              <>
+                {linkedin.isAlumni && (
+                  <div className="space-y-1">
+                    <p className="text-xs text-muted-foreground">Connection Type</p>
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-purple-500/10 text-purple-500 border border-purple-500/20 rounded text-xs">
+                      Alumni
+                    </span>
+                  </div>
+                )}
+                {linkedin.gotResponse && (
+                  <div className="space-y-1">
+                    <p className="text-xs text-muted-foreground">Response</p>
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 rounded text-xs">
+                      Received Response
+                    </span>
+                  </div>
+                )}
+              </>
+            )}
           </>
         );
     }

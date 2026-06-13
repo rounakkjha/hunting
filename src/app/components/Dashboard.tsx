@@ -52,6 +52,7 @@ interface DashboardProps {
   onLogout: () => void;
   currentUser: User | null;
   isTrial?: boolean;
+  isLoading?: boolean;
 }
 
 type ModalType = 'application' | 'coldEmail' | 'linkedin' | 'content' | 'interview' | null;
@@ -154,7 +155,7 @@ const collectionKeyMap: Record<string, string> = {
     interview: 'interviews',
   };
 
-export default function Dashboard({ userData, setUserData, onLogout, currentUser, isTrial }: DashboardProps) {
+export default function Dashboard({ userData, setUserData, onLogout, currentUser, isTrial, isLoading }: DashboardProps) {
   const [activeSection, setActiveSection] = useState('dashboard');
   const [activeModal, setActiveModal] = useState<ModalType>(null);
   const [editingEntry, setEditingEntry] = useState<any>(null);
@@ -362,8 +363,8 @@ export default function Dashboard({ userData, setUserData, onLogout, currentUser
                 onViewColdEmail={(email) => setDetailView({ type: 'coldEmail', entry: email })}
                 onViewLinkedIn={(outreach) => setDetailView({ type: 'linkedin', entry: outreach })}
               />
-              <StatsOverview userData={filteredData} onNavigate={setActiveSection} />
-              <AdvancedStats userData={filteredData} />
+              <StatsOverview userData={filteredData} onNavigate={setActiveSection} isLoading={isLoading} />
+              <AdvancedStats userData={filteredData} isLoading={isLoading} />
             </div>
 
             {/* Mobile: conditional content */}
@@ -465,7 +466,7 @@ export default function Dashboard({ userData, setUserData, onLogout, currentUser
                     ))}
                   </div>
 
-                  <StatsOverview userData={filteredData} onNavigate={setActiveSection} />
+                  <StatsOverview userData={filteredData} onNavigate={setActiveSection} isLoading={isLoading} />
 
                   <button
                     onClick={() => setActiveSection('analytics')}

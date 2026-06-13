@@ -17,9 +17,10 @@ import type { UserData } from '../App';
 
 interface AdvancedStatsProps {
   userData: UserData;
+  isLoading?: boolean;
 }
 
-export default function AdvancedStats({ userData }: AdvancedStatsProps) {
+export default function AdvancedStats({ userData, isLoading }: AdvancedStatsProps) {
   const [currentTime, setCurrentTime] = useState(format(new Date(), 'hh:mm a'));
 
   useEffect(() => {
@@ -105,6 +106,46 @@ export default function AdvancedStats({ userData }: AdvancedStatsProps) {
   ].filter(item => item.value > 0);
 
   const totalActivity = userData.applications.length + userData.coldEmails.length + userData.linkedInOutreach.length;
+
+  // Skeleton card for loading state
+  const SkeletonCard = () => (
+    <div className="relative bg-card border border-border/50 rounded-2xl shadow-lg overflow-hidden backdrop-blur-sm p-3.5 sm:p-5">
+      <div className="flex items-center justify-between mb-2 sm:mb-3">
+        <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-muted animate-pulse" />
+        <div className="w-12 h-3 rounded bg-muted animate-pulse" />
+      </div>
+      <div className="w-20 h-3 rounded bg-muted animate-pulse mb-1" />
+      <div className="w-16 h-8 sm:h-10 rounded bg-muted animate-pulse" />
+    </div>
+  );
+
+  const SkeletonChart = () => (
+    <div className="relative bg-card border border-border/50 rounded-2xl shadow-lg overflow-hidden backdrop-blur-sm p-4 sm:p-5">
+      <div className="flex items-center justify-between mb-4">
+        <div className="w-32 h-4 rounded bg-muted animate-pulse" />
+        <div className="w-8 h-8 rounded-xl bg-muted animate-pulse" />
+      </div>
+      <div className="h-[200px] sm:h-[280px] bg-muted/50 rounded-xl animate-pulse" />
+    </div>
+  );
+
+  // Show skeleton UI while loading
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <div className="w-4 h-4 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+          Loading analytics...
+        </div>
+        {/* Skeleton mini stat cards */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+          {[...Array(4)].map((_, i) => <SkeletonCard key={i} />)}
+        </div>
+        {/* Skeleton chart */}
+        <SkeletonChart />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

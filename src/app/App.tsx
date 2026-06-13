@@ -230,7 +230,7 @@ export default function App() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [userData, setUserData] = useState<UserData>(EMPTY_DATA);
   const [isTrial, setIsTrial] = useState(false);
-  const dataLoaded = useRef(false);
+  const [isLoading, setIsLoading] = useState(true);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Restore authentication state from localStorage or sessionStorage on mount
@@ -284,7 +284,7 @@ export default function App() {
     setIsAuthenticated(true);
     setIsTrial(true);
     setUserData(EMPTY_DATA);
-    dataLoaded.current = true;
+    setIsLoading(false);
     sessionStorage.setItem('huntlog-trial-user', JSON.stringify(trialUser));
   };
 
@@ -293,7 +293,7 @@ export default function App() {
     setIsAuthenticated(false);
     setUserData(EMPTY_DATA);
     setIsTrial(false);
-    dataLoaded.current = false;
+    setIsLoading(true);
     localStorage.removeItem('huntlog-auth-user');
     sessionStorage.removeItem('huntlog-trial-user');
   };
@@ -303,9 +303,10 @@ export default function App() {
   useEffect(() => {
     if (!isAuthenticated || !currentUser) return;
     if (isTrial) {
-      dataLoaded.current = true;
+      setIsLoading(false);
       return;
     }
+    setIsLoading(true);
 
     (async () => {
       console.log('[App] Loading data for user:', currentUser.username);
@@ -333,12 +334,12 @@ export default function App() {
           setUserData(normalizeData(parsed));
         }
       }
-      dataLoaded.current = true;
+      setIsLoading(false);
       console.log('[App] Data load complete');
     })();
 
     return () => {
-      dataLoaded.current = false;
+      setIsLoading(true);
     };
   }, [isAuthenticated, currentUser]);
 
@@ -346,7 +347,7 @@ export default function App() {
   useEffect(() => {
     if (!isAuthenticated || !currentUser) return;
     if (isTrial) return; // Trial mode: no persistence
-    if (!dataLoaded.current) {
+    if (isLoading) {
       console.log('[App] Data not loaded yet, skipping save');
       return;
     }
@@ -375,7 +376,7 @@ export default function App() {
 
   return (
     <ToastProvider>
-      <Dashboard userData={userData} setUserData={setUserData} onLogout={handleLogout} currentUser={currentUser} isTrial={isTrial} />
+      <Dashboard userData={userData} setUserData={setUserData} onLogout={handleLogout} currentUser={currentUser} isTrial={isTrial} isLoading={isLoading} />
     </ToastProvider>
   );
 }
