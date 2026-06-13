@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { format } from 'date-fns';
 import {
   Plus,
+  Minus,
   FileText,
   Mail,
   MessageSquare,
@@ -267,7 +268,8 @@ export default function Dashboard({ userData, setUserData, onLogout, currentUser
     const { start, end } = dateRange;
     return {
       ...userData,
-      applications: userData.applications.filter((a) => a.date >= start && a.date <= end),
+      // Filter out quick apply entries from main list view (they're tracked separately)
+      applications: userData.applications.filter((a) => a.date >= start && a.date <= end && !a.isQuickApply),
       coldEmails: userData.coldEmails.filter((e) => e.date >= start && e.date <= end),
       linkedInOutreach: userData.linkedInOutreach.filter((l) => l.date >= start && l.date <= end),
       contentLibrary: userData.contentLibrary,
@@ -480,6 +482,11 @@ export default function Dashboard({ userData, setUserData, onLogout, currentUser
       }
 
       case 'applications':
+        const todayQuickApplies = userData.applications.filter(
+          (a) => a.isQuickApply && a.date === format(new Date(), 'yyyy-MM-dd')
+        ).length;
+        const totalQuickApplies = userData.applications.filter((a) => a.isQuickApply).length;
+
         return (
           <div className="space-y-4 sm:space-y-6">
             <div className="flex items-center justify-between gap-2 sm:gap-3">
@@ -492,6 +499,59 @@ export default function Dashboard({ userData, setUserData, onLogout, currentUser
                 <span className="hidden sm:inline">Add Application</span>
               </button>
             </div>
+
+            {/* Quick Apply Counter */}
+            <div className="flex items-center gap-3 bg-card border border-border/60 rounded-xl p-3 sm:p-4 shadow-sm">
+              <div className="flex-1">
+                <div className="flex items-baseline gap-2">
+                  <span className="text-2xl sm:text-3xl font-bold text-primary">{todayQuickApplies}</span>
+                  <span className="text-xs sm:text-sm text-muted-foreground">today</span>
+                </div>
+                <div className="text-xs text-muted-foreground/70 mt-0.5">
+                  {totalQuickApplies} total quick applies
+                </div>
+              </div>
+              <div className="flex items-center gap-1.5">
+                {totalQuickApplies > 0 && (
+                  <button
+                    onClick={() => {
+                      const quickApplies = userData.applications.filter((a) => a.isQuickApply);
+                      const mostRecent = quickApplies[0];
+                      if (mostRecent) {
+                        setUserData((prev) => ({
+                          ...prev,
+                          applications: prev.applications.filter((a) => a.id !== mostRecent.id),
+                        }));
+                      }
+                    }}
+                    className="flex items-center justify-center w-10 h-10 sm:w-11 sm:h-11 rounded-lg bg-muted hover:bg-red-500/10 text-muted-foreground hover:text-red-500 transition-colors"
+                    title="Undo last"
+                  >
+                    <Minus className="w-5 h-5" strokeWidth={2.5} />
+                  </button>
+                )}
+                <button
+                  onClick={() => {
+                    const newApp = {
+                      id: Date.now().toString(),
+                      date: format(new Date(), 'yyyy-MM-dd'),
+                      company: 'Quick Apply',
+                      role: 'Quick Apply',
+                      isQuickApply: true,
+                    };
+                    setUserData((prev) => ({
+                      ...prev,
+                      applications: [newApp, ...prev.applications],
+                    }));
+                  }}
+                  className="flex items-center gap-1.5 px-4 py-2.5 bg-primary text-white rounded-lg font-medium text-sm hover:bg-primary/90 active:scale-95 transition-all shadow-sm"
+                >
+                  <Plus className="w-4 h-4" strokeWidth={2.5} />
+                  <span className="hidden sm:inline">Add</span>
+                </button>
+              </div>
+            </div>
+
             <DateFilter dateRange={dateRange} onDateRangeChange={setDateRange} />
             <ApplicationsList
               applications={filteredData.applications}

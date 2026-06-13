@@ -29,6 +29,7 @@ export interface JobApplication {
   referrerName?: string;
   referrerRole?: string;
   isGreatLakesAlumni?: boolean;
+  isQuickApply?: boolean;
 }
 
 export interface ColdEmail {

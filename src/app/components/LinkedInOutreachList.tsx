@@ -17,6 +17,7 @@ const PAGE_SIZE = 10;
 export default function LinkedInOutreachList({ outreach, onDelete, onViewDetails, onToggleResponse, onToggleAlumni, onEdit }: LinkedInOutreachListProps) {
   const [showAll, setShowAll] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [activeTab, setActiveTab] = useState<'all' | 'alumni' | 'replied' | 'noReply'>('all');
 
   const filteredOutreach = outreach.filter(item => {
     const query = searchQuery.toLowerCase();
@@ -27,7 +28,20 @@ export default function LinkedInOutreachList({ outreach, onDelete, onViewDetails
     );
   });
 
-  const displayOutreach = showAll ? filteredOutreach : filteredOutreach.slice(0, PAGE_SIZE);
+  const tabFilteredOutreach = filteredOutreach.filter(item => {
+    switch (activeTab) {
+      case 'alumni':
+        return item.isAlumni;
+      case 'replied':
+        return item.gotResponse;
+      case 'noReply':
+        return !item.gotResponse;
+      default:
+        return true;
+    }
+  });
+
+  const displayOutreach = showAll ? tabFilteredOutreach : tabFilteredOutreach.slice(0, PAGE_SIZE);
 
   return (
     <div className="relative group">
@@ -65,6 +79,28 @@ export default function LinkedInOutreachList({ outreach, onDelete, onViewDetails
               )}
             </div>
           </div>
+          {/* Filter Tabs */}
+          <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap mt-3">
+            {[
+              { key: 'all', label: 'All', count: filteredOutreach.length },
+              { key: 'alumni', label: 'Alumni', count: filteredOutreach.filter(i => i.isAlumni).length },
+              { key: 'replied', label: 'Replied', count: filteredOutreach.filter(i => i.gotResponse).length },
+              { key: 'noReply', label: 'No Reply', count: filteredOutreach.filter(i => !i.gotResponse).length },
+            ].map((tab) => (
+              <button
+                key={tab.key}
+                onClick={() => setActiveTab(tab.key as typeof activeTab)}
+                className={`px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-lg sm:rounded-xl text-[11px] sm:text-xs font-semibold transition-all duration-200 ${
+                  activeTab === tab.key
+                    ? 'bg-gradient-to-r from-primary to-accent text-white shadow-lg shadow-primary/25 scale-105'
+                    : 'bg-background/60 text-muted-foreground hover:text-foreground hover:bg-background/80 border border-border/50 hover:border-primary/30'
+                }`}
+              >
+                {tab.label}
+                <span className="ml-1.5 opacity-75">({tab.count})</span>
+              </button>
+            ))}
+          </div>
         </div>
 
         <div className="p-3 sm:p-6">
@@ -76,6 +112,18 @@ export default function LinkedInOutreachList({ outreach, onDelete, onViewDetails
               <h4 className="text-lg font-semibold mb-2">No LinkedIn outreach yet</h4>
               <p className="text-sm text-muted-foreground max-w-sm mx-auto">
                 Start building your network by adding your first connection
+              </p>
+            </div>
+          ) : tabFilteredOutreach.length === 0 ? (
+            <div className="text-center py-10 sm:py-16">
+              <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-muted/50 flex items-center justify-center">
+                <MessageSquare className="w-8 h-8 text-muted-foreground/50" />
+              </div>
+              <h4 className="text-base font-semibold mb-2 text-muted-foreground">
+                No {activeTab === 'alumni' ? 'alumni' : activeTab === 'replied' ? 'replies' : activeTab === 'noReply' ? 'pending replies' : 'connections'} found
+              </h4>
+              <p className="text-sm text-muted-foreground/70 max-w-sm mx-auto">
+                Try selecting a different filter or add new connections
               </p>
             </div>
           ) : (
@@ -197,7 +245,7 @@ export default function LinkedInOutreachList({ outreach, onDelete, onViewDetails
                   </div>
                 </div>
               ))}
-              {outreach.length > PAGE_SIZE && (
+              {tabFilteredOutreach.length > PAGE_SIZE && (
                 <div className="text-center pt-4">
                   <button
                     onClick={() => setShowAll((prev) => !prev)}
@@ -205,7 +253,7 @@ export default function LinkedInOutreachList({ outreach, onDelete, onViewDetails
                   >
                     {showAll
                       ? 'Show less'
-                      : `Show all ${outreach.length} connections`}
+                      : `Show all ${tabFilteredOutreach.length} connections`}
                   </button>
                 </div>
               )}
