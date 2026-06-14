@@ -269,8 +269,8 @@ export default function Dashboard({ userData, setUserData, onLogout, currentUser
     const { start, end } = dateRange;
     return {
       ...userData,
-      // Filter out quick apply entries from main list view (they're tracked separately)
-      applications: userData.applications.filter((a) => a.date >= start && a.date <= end && !a.isQuickApply),
+      // Include quick applies in the count but keep date range filter
+      applications: userData.applications.filter((a) => a.date >= start && a.date <= end),
       coldEmails: userData.coldEmails.filter((e) => e.date >= start && e.date <= end),
       linkedInOutreach: userData.linkedInOutreach.filter((l) => l.date >= start && l.date <= end),
       contentLibrary: userData.contentLibrary,
@@ -555,7 +555,7 @@ export default function Dashboard({ userData, setUserData, onLogout, currentUser
 
             <DateFilter dateRange={dateRange} onDateRangeChange={setDateRange} />
             <ApplicationsList
-              applications={filteredData.applications}
+              applications={filteredData.applications.filter((a) => !a.isQuickApply)}
               onDelete={(id) => {
                 const app = userData.applications.find((a) => a.id === id);
                 softDelete('application', id, app?.company || 'Application');
