@@ -82,21 +82,24 @@ export default function QuickAddModal({ type, customFields = [], knownCompanies 
 
     switch (type) {
       case 'application':
-        // Same company + same role = duplicate
-        // Same company + different role = NOT duplicate (can apply to multiple roles at same company)
+        // Same company + same role = duplicate — require both to be non-empty
+        if (!data.company?.trim() || !data.role?.trim()) return false;
         return existingEntries.some((e: any) =>
-          e.company?.toLowerCase() === data.company?.toLowerCase() &&
-          e.role?.toLowerCase() === data.role?.toLowerCase()
+          e.company?.trim() && e.role?.trim() &&
+          e.company.toLowerCase() === data.company.toLowerCase() &&
+          e.role.toLowerCase() === data.role.toLowerCase()
         );
       case 'coldEmail':
-        // Check by person name only (different people at same company is allowed)
+        // Check by person name only — skip if name is empty
+        if (!data.name?.trim()) return false;
         return existingEntries.some((e: any) =>
-          e.name?.toLowerCase() === data.name?.toLowerCase()
+          e.name?.trim() && e.name.toLowerCase() === data.name.toLowerCase()
         );
       case 'linkedin':
-        // Check by person name only (different people at same company is allowed)
+        // Check by person name only — skip if name is empty
+        if (!data.name?.trim()) return false;
         return existingEntries.some((e: any) =>
-          e.name?.toLowerCase() === data.name?.toLowerCase()
+          e.name?.trim() && e.name.toLowerCase() === data.name.toLowerCase()
         );
       case 'interview':
         // Same company + same role = duplicate
