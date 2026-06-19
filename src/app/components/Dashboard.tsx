@@ -21,7 +21,7 @@ import {
   BarChart3,
   CheckCircle,
 } from 'lucide-react';
-import type { UserData, JobApplication, ColdEmail, LinkedInOutreach, CustomField, TrashItem, TrashItemType, User, Interview, InterviewStatus, InterviewRoundStatus } from '../App';
+import type { UserData, JobApplication, ColdEmail, LinkedInOutreach, CustomField, TrashItem, TrashItemType, User, Interview, InterviewStatus, InterviewRoundStatus, ReferralStatus } from '../App';
 import { updateUserPassword } from '../utils/auth';
 import Sidebar from './Sidebar';
 import TimeGreeting from './TimeGreeting';
@@ -583,6 +583,7 @@ export default function Dashboard({ userData, setUserData, onLogout, currentUser
                             date: format(new Date(), 'yyyy-MM-dd'),
                             company: app.company,
                             role: app.role,
+                            jobUrl: app.jobUrl,
                             contacts: [],
                           },
                           ...prev.targetCompanies,
@@ -646,6 +647,7 @@ export default function Dashboard({ userData, setUserData, onLogout, currentUser
                                     date: format(new Date(), 'yyyy-MM-dd'),
                                     company: app.company,
                                     role: app.role,
+                                    jobUrl: app.jobUrl,
                                     contacts: [],
                                   },
                                   ...prev.targetCompanies,
@@ -826,21 +828,43 @@ export default function Dashboard({ userData, setUserData, onLogout, currentUser
             <h2 className="text-2xl sm:text-3xl font-bold">Target Companies</h2>
             <TargetCompanies
               companies={userData.targetCompanies}
-              onAdd={(company, role, date) => {
-                setUserData((prev) => ({
-                  ...prev,
-                  targetCompanies: [
-                    {
-                      id: Date.now().toString(),
-                      date: date || format(new Date(), 'yyyy-MM-dd'),
-                      company,
-                      role,
-                      contacts: [],
-                    },
-                    ...prev.targetCompanies,
-                  ],
-                }));
+              onAdd={(company, role, date, jobUrl, referralStatus) => {
+                const newTargetId = Date.now().toString();
+                const newTarget: UserData['targetCompanies'][number] = {
+                  id: newTargetId,
+                  date: date || format(new Date(), 'yyyy-MM-dd'),
+                  company,
+                  role,
+                  jobUrl,
+                  referralStatus,
+                  contacts: [],
+                };
+                setUserData((prev) => {
+                  const shouldCreateApplication = referralStatus === 'done' && !newTarget.referralApplicationCreated;
+                  const updatedTargets = [newTarget, ...prev.targetCompanies];
+                  if (!shouldCreateApplication) {
+                    return { ...prev, targetCompanies: updatedTargets };
+                  }
+                  const newApp: JobApplication = {
+                    id: Date.now().toString(),
+                    date: format(new Date(), 'yyyy-MM-dd'),
+                    company,
+                    role,
+                    source: 'referral',
+                    jobUrl,
+                  };
+                  return {
+                    ...prev,
+                    targetCompanies: updatedTargets.map((t) =>
+                      t.id === newTargetId ? { ...t, referralApplicationCreated: true } : t
+                    ),
+                    applications: [newApp, ...prev.applications],
+                  };
+                });
                 showToast(randomPick(quirkyToasts.addCompany));
+                if (referralStatus === 'done') {
+                  showToast(randomPick(quirkyToasts.addApplication));
+                }
               }}
               onDelete={(id) => {
                 const tc = userData.targetCompanies.find((c) => c.id === id);
@@ -884,13 +908,36 @@ export default function Dashboard({ userData, setUserData, onLogout, currentUser
                 showToast(randomPick(quirkyToasts.edit));
               }}
               onUpdateCompany={(companyId, updates) => {
-                setUserData((prev) => ({
-                  ...prev,
-                  targetCompanies: prev.targetCompanies.map((c) =>
+                setUserData((prev) => {
+                  const company = prev.targetCompanies.find((c) => c.id === companyId);
+                  const isMarkingDone = updates.referralStatus === 'done' && company?.referralStatus !== 'done' && !company?.referralApplicationCreated;
+                  const updatedTargets = prev.targetCompanies.map((c) =>
                     c.id === companyId ? { ...c, ...updates } : c
-                  ),
-                }));
+                  );
+                  if (!isMarkingDone) {
+                    return { ...prev, targetCompanies: updatedTargets };
+                  }
+                  const updatedCompany = updatedTargets.find((c) => c.id === companyId);
+                  const newApp: JobApplication = {
+                    id: Date.now().toString(),
+                    date: format(new Date(), 'yyyy-MM-dd'),
+                    company: updatedCompany?.company || company?.company || '',
+                    role: updatedCompany?.role || company?.role,
+                    source: 'referral',
+                    jobUrl: updatedCompany?.jobUrl || company?.jobUrl,
+                  };
+                  return {
+                    ...prev,
+                    targetCompanies: updatedTargets.map((c) =>
+                      c.id === companyId ? { ...c, referralApplicationCreated: true } : c
+                    ),
+                    applications: [newApp, ...prev.applications],
+                  };
+                });
                 showToast(randomPick(quirkyToasts.edit));
+                if (updates.referralStatus === 'done') {
+                  showToast(randomPick(quirkyToasts.addApplication));
+                }
               }}
               onUpdateNotes={(companyId, notes) =>
                 setUserData((prev) => ({

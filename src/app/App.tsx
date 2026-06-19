@@ -141,11 +141,16 @@ export interface CompanyContact {
   linkedinUrl?: string;
 }
 
+export type ReferralStatus = 'asked' | 'awaiting' | 'done';
+
 export interface TargetCompany {
   id: string;
   date: string;
   company: string;
   role?: string;
+  jobUrl?: string;
+  referralStatus?: ReferralStatus;
+  referralApplicationCreated?: boolean;
   contacts: CompanyContact[];
   notes?: string;
   targeted?: boolean;
