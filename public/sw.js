@@ -52,7 +52,10 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Skip API requests
+  // Skip cross-origin requests (analytics, CDN, etc.) and API requests
+  if (requestUrl.origin !== self.location.origin) {
+    return;
+  }
   if (event.request.url.includes('/api/') || event.request.url.includes('supabase')) {
     return;
   }
@@ -63,7 +66,7 @@ self.addEventListener('fetch', (event) => {
         // Return cached version and update cache in background
         fetch(event.request)
           .then((response) => {
-            if (response.ok) {
+            if (response && response.ok) {
               caches.open(CACHE_NAME).then((cache) => {
                 cache.put(event.request, response.clone());
               });
@@ -95,6 +98,7 @@ self.addEventListener('fetch', (event) => {
           if (event.request.mode === 'navigate') {
             return caches.match('/index.html');
           }
+          return new Response('Network unavailable', { status: 503, statusText: 'Service Unavailable' });
         });
     })
   );
