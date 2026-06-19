@@ -192,6 +192,10 @@ async function ollamaGenerate(system: string, prompt: string, format?: 'json'): 
       prompt,
       stream: false,
       format,
+      options: {
+        temperature: 0,
+        seed: 42,
+      },
     }),
   });
 
