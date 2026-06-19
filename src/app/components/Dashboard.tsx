@@ -45,6 +45,7 @@ import TrashBin from './TrashBin';
 import { useToast } from './Toast';
 import StrategyBoard from './StrategyBoard';
 import UserManagement from './UserManagement';
+import ResumeMatcher from './ResumeMatcher';
 
 interface DashboardProps {
   userData: UserData;
@@ -1153,6 +1154,13 @@ export default function Dashboard({ userData, setUserData, onLogout, currentUser
             <h2 className="text-3xl font-bold">Analytics</h2>
             <DateFilter dateRange={dateRange} onDateRangeChange={setDateRange} />
             <AdvancedStats userData={filteredData} />
+          </div>
+        );
+
+      case 'matcher':
+        return (
+          <div className="space-y-6">
+            <ResumeMatcher />
           </div>
         );
 

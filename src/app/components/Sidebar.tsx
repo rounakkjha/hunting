@@ -19,6 +19,7 @@ import {
   Users,
   Briefcase,
   Key,
+  Brain,
 } from 'lucide-react';
 import ThemeToggle from './ThemeToggle';
 
@@ -77,6 +78,12 @@ export default function Sidebar({ activeSection, setActiveSection, onLogout, onC
         { id: 'strategy', icon: Crosshair, label: 'Strategy' },
         { id: 'content', icon: BookOpen, label: 'Content' },
         { id: 'links', icon: Link2, label: 'Quick Links' },
+      ],
+    },
+    {
+      title: 'AI',
+      items: [
+        { id: 'matcher', icon: Brain, label: 'Resume Matcher' },
       ],
     },
     {
