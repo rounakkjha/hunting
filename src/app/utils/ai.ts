@@ -182,29 +182,33 @@ export interface MatchError {
 
 export type MatchResponse = MatchResult | MatchError;
 
+async function ollamaGenerate(system: string, prompt: string, format?: 'json'): Promise<string> {
+  const res = await fetch(`${OLLAMA_URL}/api/generate`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model: OLLAMA_MODEL,
+      system,
+      prompt,
+      stream: false,
+      format,
+    }),
+  });
+
+  if (!res.ok) {
+    const errorText = await res.text().catch(() => res.statusText);
+    throw new Error(`Ollama error (${res.status}): ${errorText}`);
+  }
+
+  const data = await res.json();
+  return (data.response as string) || '';
+}
+
 export async function matchResumeWithJD(resume: string, jobDescription: string): Promise<MatchResponse> {
   const userPrompt = `RESUME:\n${resume}\n\nJOB_DESCRIPTION:\n${jobDescription}`;
 
   try {
-    const res = await fetch(`${OLLAMA_URL}/api/generate`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: OLLAMA_MODEL,
-        system: SYSTEM_PROMPT,
-        prompt: userPrompt,
-        stream: false,
-        format: 'json',
-      }),
-    });
-
-    if (!res.ok) {
-      const errorText = await res.text().catch(() => res.statusText);
-      throw new Error(`Ollama error (${res.status}): ${errorText}`);
-    }
-
-    const data = await res.json();
-    const text = data.response as string;
+    const text = await ollamaGenerate(SYSTEM_PROMPT, userPrompt, 'json');
     if (!text) {
       throw new Error('No response from Ollama.');
     }
@@ -214,6 +218,85 @@ export async function matchResumeWithJD(resume: string, jobDescription: string):
     } catch {
       throw new Error('Failed to parse Ollama response as JSON.');
     }
+  } catch (err: any) {
+    if (err.message?.includes('fetch') || err.message?.includes('Failed to fetch')) {
+      throw new Error(
+        'Could not connect to Ollama. Make sure Ollama is running (ollama serve) and the model is pulled.'
+      );
+    }
+    throw err;
+  }
+}
+
+const REVISION_PROMPT = `You generate a single, self-contained resume revision prompt that a candidate will paste into a general-purpose AI assistant (ChatGPT, Claude, Gemini) together with their resume file. The downstream assistant has NO access to the job description or to the match analysis. Your generated prompt must carry everything it needs to apply a specific, pre-diagnosed set of edits accurately.
+
+### INPUTS
+
+- ANALYSIS — the JSON from the match-scoring engine (improvements, missing_keywords, gaps, strengths, must_haves, overall_match_percentage).
+- RESUME_TEXT — the candidate's current resume text, for referencing exact lines.
+- LENGTH_CONSTRAINT (optional) — e.g. "1 page", "max 650 words", "2 pages". If absent, instruct the downstream AI to preserve the resume's current length.
+- ROLE_TITLE / COMPANY (optional) — for a context line.
+- JOB_DESCRIPTION (optional) — include a short context note only if provided; otherwise omit.
+
+### OUTPUT
+
+Produce ONLY the hand-off prompt, as clean Markdown that also reads fine as plain text. No JSON, no commentary, no outer code fence. It is addressed to the downstream assistant, written in the candidate's first person where natural ("Here is my resume…").
+
+The hand-off prompt MUST contain these sections, in order:
+
+1. Task line — who the assistant is and what to do. e.g. "You are an expert resume editor and ATS specialist. I've attached my resume below. Apply the specific edits listed here, then give me the exact changes to make."
+
+2. Hard constraints (bullet list):
+   - Length: stay within {LENGTH_CONSTRAINT} (or "the same length / page count as my current resume"). If you add content, trim elsewhere — do not let the resume grow.
+   - Preserve section order, formatting style, and my personal voice.
+   - ATS-safe: standard headers, no tables or graphics-dependent layout, plain-text friendly.
+   - Never fabricate experience, titles, dates, or metrics. If an edit needs a real number or detail only I have, tag it [NEEDS INPUT FROM ME] instead of inventing it.
+   - Use strong action verbs; quantify impact wherever my experience supports it.
+
+3. Edits to apply (high → low priority). Build this from ANALYSIS.improvements and gaps. For each edit give: the location in the resume, the current text ("Change this:"), the improved version ("To this:"), and a [NEEDS INPUT FROM ME] tag wherever requires_new_skill is true or a placeholder metric appears. Keep every quoted "before" line exact so the assistant can find-and-replace it.
+
+4. Keywords to weave in — from ANALYSIS.missing_keywords, with the instruction to integrate them naturally into real bullets, NOT to keyword-stuff a skills list.
+
+5. What I want back from you — the required downstream output:
+   1. A numbered, copy-friendly change list: "In [section] → change '[old]' to '[new]'", in order.
+   2. A separate list of anything tagged [NEEDS INPUT FROM ME], each with a one-line question.
+   3. Then ask whether I want the full revised resume.
+
+6. Closing — "My resume is below/attached. If you don't see it, ask me for it before making changes." followed by a placeholder line: --- PASTE OR ATTACH RESUME HERE ---.
+
+### RULES
+
+- Embed the specific findings from ANALYSIS — the downstream assistant cannot re-diagnose, so the diagnosis must live inside this prompt.
+- Keep every before/after quote exact (reliable find-and-replace).
+- Don't ask the downstream AI to act on the match percentage; one optional context line is fine ("This resume was scored against a target role; the gaps below are what to close.").
+- Plain, portable language — must work in any AI chat, not one specific vendor.
+- Output only the hand-off prompt. No meta-talk, no preamble.`;
+
+export async function generateRevisionPrompt(
+  analysis: MatchResult,
+  resumeText: string,
+  options: {
+    lengthConstraint?: string;
+    roleTitle?: string;
+    company?: string;
+    jobDescription?: string;
+  } = {}
+): Promise<string> {
+  const userPrompt = [
+    `ANALYSIS:\n${JSON.stringify(analysis)}`,
+    `RESUME_TEXT:\n${resumeText}`,
+    `LENGTH_CONSTRAINT:\n${options.lengthConstraint || 'preserve current resume length'}`,
+    `ROLE_TITLE:\n${options.roleTitle || 'Not specified'}`,
+    `COMPANY:\n${options.company || 'Not specified'}`,
+    `JOB_DESCRIPTION:\n${options.jobDescription || 'Not specified'}`,
+  ].join('\n\n');
+
+  try {
+    const text = await ollamaGenerate(REVISION_PROMPT, userPrompt);
+    return text
+      .replace(/^```[\s\S]*?\n/, '')
+      .replace(/\n```\s*$/, '')
+      .trim();
   } catch (err: any) {
     if (err.message?.includes('fetch') || err.message?.includes('Failed to fetch')) {
       throw new Error(

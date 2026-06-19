@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
-import { FileText, Upload, Sparkles, Loader2, CheckCircle, XCircle, AlertCircle, Target, Wand2, Lightbulb, TrendingUp, ArrowRight } from 'lucide-react';
-import { matchResumeWithJD, type MatchResponse } from '../utils/ai';
+import { FileText, Upload, Sparkles, Loader2, CheckCircle, XCircle, AlertCircle, Target, Wand2, Lightbulb, TrendingUp, ArrowRight, Copy, Download, X } from 'lucide-react';
+import { matchResumeWithJD, generateRevisionPrompt, type MatchResponse } from '../utils/ai';
 import { extractTextFromFile } from '../utils/fileParser';
 
 export default function ResumeMatcher() {
@@ -11,6 +11,12 @@ export default function ResumeMatcher() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [result, setResult] = useState<MatchResponse | null>(null);
+  const [revisionLoading, setRevisionLoading] = useState(false);
+  const [revisionPrompt, setRevisionPrompt] = useState('');
+  const [showRevisionModal, setShowRevisionModal] = useState(false);
+  const [lengthConstraint, setLengthConstraint] = useState('');
+  const [roleTitle, setRoleTitle] = useState('');
+  const [company, setCompany] = useState('');
 
   const jdInputRef = useRef<HTMLInputElement>(null);
   const resumeInputRef = useRef<HTMLInputElement>(null);
@@ -53,6 +59,26 @@ export default function ResumeMatcher() {
 
   const hasResult = result && !('error' in result && result.error);
   const typedResult = hasResult ? (result as Exclude<MatchResponse, { error: true }>) : null;
+
+  const handleGenerateRevision = async () => {
+    if (!typedResult || !resumeText.trim()) return;
+    setRevisionLoading(true);
+    setError('');
+    try {
+      const prompt = await generateRevisionPrompt(typedResult, resumeText.trim(), {
+        lengthConstraint,
+        roleTitle,
+        company,
+        jobDescription: jdText.trim(),
+      });
+      setRevisionPrompt(prompt);
+      setShowRevisionModal(true);
+    } catch (err: any) {
+      setError(err.message || 'Failed to generate revision prompt.');
+    } finally {
+      setRevisionLoading(false);
+    }
+  };
 
   return (
     <div className="space-y-6 sm:space-y-8">
@@ -135,7 +161,64 @@ export default function ResumeMatcher() {
             gaps={typedResult.gaps}
           />
           <Improvements improvements={typedResult.improvements} />
+
+          <div className="bg-gradient-to-br from-primary/10 via-accent/5 to-purple-500/10 border border-primary/20 rounded-2xl p-4 sm:p-5 space-y-4">
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-primary" />
+              <h3 className="font-bold">Generate AI Revision Prompt</h3>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Create a copy-paste prompt for ChatGPT / Claude / Gemini that tells it exactly how to rewrite your resume for this job.
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <input
+                type="text"
+                value={lengthConstraint}
+                onChange={(e) => setLengthConstraint(e.target.value)}
+                placeholder="Length (e.g. 1 page)"
+                className="px-3 py-2 bg-background/60 rounded-lg border border-border/60 focus:ring-2 focus:ring-primary/30 focus:border-primary/40 outline-none transition-all text-sm"
+              />
+              <input
+                type="text"
+                value={roleTitle}
+                onChange={(e) => setRoleTitle(e.target.value)}
+                placeholder="Role title (optional)"
+                className="px-3 py-2 bg-background/60 rounded-lg border border-border/60 focus:ring-2 focus:ring-primary/30 focus:border-primary/40 outline-none transition-all text-sm"
+              />
+              <input
+                type="text"
+                value={company}
+                onChange={(e) => setCompany(e.target.value)}
+                placeholder="Company (optional)"
+                className="px-3 py-2 bg-background/60 rounded-lg border border-border/60 focus:ring-2 focus:ring-primary/30 focus:border-primary/40 outline-none transition-all text-sm"
+              />
+            </div>
+            <button
+              onClick={handleGenerateRevision}
+              disabled={revisionLoading}
+              className="flex items-center justify-center gap-2 px-5 py-2.5 bg-gradient-to-r from-primary to-accent text-white rounded-xl font-semibold shadow-lg shadow-primary/25 hover:shadow-xl transition-all disabled:opacity-60"
+            >
+              {revisionLoading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Generating prompt...
+                </>
+              ) : (
+                <>
+                  <Wand2 className="w-4 h-4" />
+                  Generate Revision Prompt
+                </>
+              )}
+            </button>
+          </div>
         </div>
+      )}
+
+      {showRevisionModal && (
+        <RevisionPromptModal
+          prompt={revisionPrompt}
+          onClose={() => setShowRevisionModal(false)}
+        />
       )}
     </div>
   );
@@ -481,6 +564,70 @@ function Improvements({ improvements }: { improvements: any[] }) {
             )}
           </div>
         ))}
+      </div>
+    </div>
+  );
+}
+
+function RevisionPromptModal({ prompt, onClose }: { prompt: string; onClose: () => void }) {
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(prompt);
+    } catch {
+      // ignore
+    }
+  };
+
+  const handleDownload = () => {
+    const blob = new Blob([prompt], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'resume-revision-prompt.txt';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+      <div className="relative bg-card border border-border/50 rounded-3xl shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col">
+        <div className="flex items-center justify-between p-5 border-b border-border/50">
+          <div className="flex items-center gap-2">
+            <Sparkles className="w-5 h-5 text-primary" />
+            <h3 className="text-lg font-bold">Revision Prompt</h3>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-all"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+        <div className="p-5 flex-1 overflow-y-auto">
+          <textarea
+            value={prompt}
+            readOnly
+            className="w-full h-96 px-4 py-3 bg-background/60 rounded-xl border border-border/60 focus:ring-2 focus:ring-primary/30 focus:border-primary/40 outline-none transition-all resize-none text-sm leading-relaxed font-mono"
+          />
+        </div>
+        <div className="p-5 border-t border-border/50 flex gap-3">
+          <button
+            onClick={handleCopy}
+            className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-primary to-accent text-white rounded-xl font-medium hover:shadow-lg transition-all"
+          >
+            <Copy className="w-4 h-4" />
+            Copy
+          </button>
+          <button
+            onClick={handleDownload}
+            className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-muted text-foreground rounded-xl font-medium hover:bg-muted/80 transition-all"
+          >
+            <Download className="w-4 h-4" />
+            Download
+          </button>
+        </div>
       </div>
     </div>
   );
