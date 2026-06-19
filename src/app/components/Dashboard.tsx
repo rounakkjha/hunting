@@ -1160,7 +1160,7 @@ export default function Dashboard({ userData, setUserData, onLogout, currentUser
       case 'matcher':
         return (
           <div className="space-y-6">
-            <ResumeMatcher />
+            <ResumeMatcher userData={userData} setUserData={setUserData} />
           </div>
         );
 

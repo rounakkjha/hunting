@@ -2,8 +2,14 @@ import { useState, useRef } from 'react';
 import { FileText, Upload, Sparkles, Loader2, CheckCircle, XCircle, AlertCircle, Target, Wand2, Lightbulb, TrendingUp, ArrowRight, Copy, Download, X } from 'lucide-react';
 import { matchResumeWithJD, generateRevisionPrompt, type MatchResponse } from '../utils/ai';
 import { extractTextFromFile } from '../utils/fileParser';
+import type { UserData, ResumeAnalysis } from '../App';
 
-export default function ResumeMatcher() {
+interface ResumeMatcherProps {
+  userData: UserData;
+  setUserData: (data: UserData | ((prev: UserData) => UserData)) => void;
+}
+
+export default function ResumeMatcher({ userData, setUserData }: ResumeMatcherProps) {
   const [jdText, setJdText] = useState('');
   const [resumeText, setResumeText] = useState('');
   const [jdFileName, setJdFileName] = useState('');
@@ -17,6 +23,8 @@ export default function ResumeMatcher() {
   const [lengthConstraint, setLengthConstraint] = useState('');
   const [roleTitle, setRoleTitle] = useState('');
   const [company, setCompany] = useState('');
+  const [analysisTitle, setAnalysisTitle] = useState('');
+  const [showPastAnalyses, setShowPastAnalyses] = useState(false);
 
   const jdInputRef = useRef<HTMLInputElement>(null);
   const resumeInputRef = useRef<HTMLInputElement>(null);
@@ -80,6 +88,52 @@ export default function ResumeMatcher() {
     }
   };
 
+  const handleSaveAnalysis = () => {
+    if (!typedResult || !resumeText.trim() || !jdText.trim()) return;
+    const title = analysisTitle.trim() || `${roleTitle || 'Untitled role'} — ${company || 'Unknown company'}`;
+    const newAnalysis: ResumeAnalysis = {
+      id: Date.now().toString(),
+      date: new Date().toISOString(),
+      title,
+      company: company || undefined,
+      role: roleTitle || undefined,
+      jdText: jdText.trim(),
+      resumeText: resumeText.trim(),
+      result: typedResult,
+    };
+    setUserData((prev) => ({
+      ...prev,
+      resumeAnalyses: [newAnalysis, ...prev.resumeAnalyses],
+    }));
+    setAnalysisTitle('');
+  };
+
+  const handleLoadAnalysis = (analysis: ResumeAnalysis) => {
+    setJdText(analysis.jdText);
+    setResumeText(analysis.resumeText);
+    setResult(analysis.result);
+    setRoleTitle(analysis.role || '');
+    setCompany(analysis.company || '');
+    setAnalysisTitle(analysis.title || '');
+    setShowPastAnalyses(false);
+    setError('');
+  };
+
+  const handleNewAnalysis = () => {
+    setJdText('');
+    setResumeText('');
+    setJdFileName('');
+    setResumeFileName('');
+    setResult(null);
+    setError('');
+    setAnalysisTitle('');
+    setRoleTitle('');
+    setCompany('');
+    setShowPastAnalyses(false);
+    setShowRevisionModal(false);
+    setRevisionPrompt('');
+  };
+
   return (
     <div className="space-y-6 sm:space-y-8">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -91,6 +145,27 @@ export default function ResumeMatcher() {
           <p className="text-sm text-muted-foreground mt-1">
             Paste or upload a job description and your resume. AI scores the match and tells you how to improve.
           </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleNewAnalysis}
+            className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium bg-muted hover:bg-muted/80 text-foreground rounded-xl border border-border/50 transition-all"
+          >
+            <FileText className="w-4 h-4" />
+            New Analysis
+          </button>
+          <button
+            onClick={() => setShowPastAnalyses(true)}
+            className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium bg-background/60 hover:bg-primary/10 text-primary rounded-xl border border-primary/20 transition-all"
+          >
+            <TrendingUp className="w-4 h-4" />
+            Past Analyses
+            {userData.resumeAnalyses.length > 0 && (
+              <span className="ml-1 px-1.5 py-0.5 text-[10px] bg-primary text-white rounded-full">
+                {userData.resumeAnalyses.length}
+              </span>
+            )}
+          </button>
         </div>
       </div>
 
@@ -162,6 +237,32 @@ export default function ResumeMatcher() {
           />
           <Improvements improvements={typedResult.improvements} />
 
+          <div className="bg-card border border-border/50 rounded-2xl p-4 sm:p-5 space-y-3 shadow-sm">
+            <div className="flex items-center gap-2">
+              <CheckCircle className="w-5 h-5 text-emerald-500" />
+              <h3 className="font-bold">Save Analysis</h3>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Store this analysis so you can come back to it later or compare it with other roles.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-3">
+              <input
+                type="text"
+                value={analysisTitle}
+                onChange={(e) => setAnalysisTitle(e.target.value)}
+                placeholder="Analysis title (optional)"
+                className="flex-1 px-3 py-2 bg-background/60 rounded-lg border border-border/60 focus:ring-2 focus:ring-primary/30 focus:border-primary/40 outline-none transition-all text-sm"
+              />
+              <button
+                onClick={handleSaveAnalysis}
+                className="flex items-center justify-center gap-2 px-5 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl font-semibold transition-all"
+              >
+                <CheckCircle className="w-4 h-4" />
+                Save Analysis
+              </button>
+            </div>
+          </div>
+
           <div className="bg-gradient-to-br from-primary/10 via-accent/5 to-purple-500/10 border border-primary/20 rounded-2xl p-4 sm:p-5 space-y-4">
             <div className="flex items-center gap-2">
               <Sparkles className="w-5 h-5 text-primary" />
@@ -218,6 +319,14 @@ export default function ResumeMatcher() {
         <RevisionPromptModal
           prompt={revisionPrompt}
           onClose={() => setShowRevisionModal(false)}
+        />
+      )}
+
+      {showPastAnalyses && (
+        <PastAnalysesModal
+          analyses={userData.resumeAnalyses}
+          onLoad={handleLoadAnalysis}
+          onClose={() => setShowPastAnalyses(false)}
         />
       )}
     </div>
@@ -627,6 +736,74 @@ function RevisionPromptModal({ prompt, onClose }: { prompt: string; onClose: () 
             <Download className="w-4 h-4" />
             Download
           </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PastAnalysesModal({
+  analyses,
+  onLoad,
+  onClose,
+}: {
+  analyses: ResumeAnalysis[];
+  onLoad: (analysis: ResumeAnalysis) => void;
+  onClose: () => void;
+}) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+      <div className="relative bg-card border border-border/50 rounded-3xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col">
+        <div className="flex items-center justify-between p-5 border-b border-border/50">
+          <div className="flex items-center gap-2">
+            <TrendingUp className="w-5 h-5 text-primary" />
+            <h3 className="text-lg font-bold">Past Analyses</h3>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-all"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+        <div className="p-5 flex-1 overflow-y-auto">
+          {!analyses.length ? (
+            <p className="text-sm text-muted-foreground text-center py-8">
+              No saved analyses yet. Analyze and save a JD + resume to see it here.
+            </p>
+          ) : (
+            <div className="space-y-3">
+              {analyses.map((analysis) => {
+                const date = new Date(analysis.date).toLocaleDateString();
+                const result = analysis.result as Exclude<MatchResponse, { error: true }>;
+                const score = result?.overall_match_percentage ?? '?';
+                return (
+                  <div
+                    key={analysis.id}
+                    className="p-4 bg-background/50 rounded-xl border border-border/40 flex flex-col sm:flex-row sm:items-center gap-3"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium truncate">{analysis.title || 'Untitled analysis'}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {date} · Match: {score}%
+                      </p>
+                      {(analysis.role || analysis.company) && (
+                        <p className="text-xs text-primary mt-1">
+                          {[analysis.role, analysis.company].filter(Boolean).join(' · ')}
+                        </p>
+                      )}
+                    </div>
+                    <button
+                      onClick={() => onLoad(analysis)}
+                      className="px-4 py-2 text-sm font-medium bg-primary hover:bg-primary/90 text-white rounded-xl transition-all"
+                    >
+                      Open
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       </div>
     </div>
