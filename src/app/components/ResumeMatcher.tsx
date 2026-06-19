@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { FileText, Upload, Sparkles, Loader2, CheckCircle, XCircle, AlertCircle, Target, Wand2, Lightbulb, TrendingUp, ArrowRight, Copy, Download, X } from 'lucide-react';
 import { matchResumeWithJD, generateRevisionPrompt, type MatchResponse } from '../utils/ai';
 import { extractTextFromFile } from '../utils/fileParser';
@@ -25,9 +25,38 @@ export default function ResumeMatcher({ userData, setUserData }: ResumeMatcherPr
   const [company, setCompany] = useState('');
   const [analysisTitle, setAnalysisTitle] = useState('');
   const [showPastAnalyses, setShowPastAnalyses] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [progressMessage, setProgressMessage] = useState('');
 
   const jdInputRef = useRef<HTMLInputElement>(null);
   const resumeInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!loading) {
+      setProgress(100);
+      const timeout = setTimeout(() => {
+        setProgress(0);
+        setProgressMessage('');
+      }, 600);
+      return () => clearTimeout(timeout);
+    }
+
+    const start = Date.now();
+    const estimatedMs = 25000;
+    const interval = setInterval(() => {
+      const elapsed = Date.now() - start;
+      const next = Math.min(95, (elapsed / estimatedMs) * 100);
+      setProgress(next);
+
+      if (next < 25) setProgressMessage('Reading your resume and JD...');
+      else if (next < 50) setProgressMessage('Matching skills and experience...');
+      else if (next < 80) setProgressMessage('Comparing requirements...');
+      else if (next < 95) setProgressMessage('Almost there...');
+      else setProgressMessage('Taking a little longer than expected. Sit relaxed, your insights are coming...');
+    }, 300);
+
+    return () => clearInterval(interval);
+  }, [loading]);
 
   const handleFile = async (
     file: File,
@@ -214,6 +243,24 @@ export default function ResumeMatcher({ userData, setUserData }: ResumeMatcherPr
           Powered by local Ollama. Make sure Ollama is running on your machine.
         </p>
       </div>
+
+      {loading && (
+        <div className="bg-card border border-border/50 rounded-2xl p-5 space-y-3 shadow-sm animate-fade-in">
+          <div className="flex items-center justify-between text-sm">
+            <span className="font-medium flex items-center gap-2">
+              <Loader2 className="w-4 h-4 animate-spin" />
+              {progressMessage}
+            </span>
+            <span className="font-bold text-primary">{Math.round(progress)}%</span>
+          </div>
+          <div className="h-3 w-full bg-muted rounded-full overflow-hidden">
+            <div
+              className="h-full bg-gradient-to-r from-primary via-accent to-purple-500 rounded-full transition-all duration-300 ease-out"
+              style={{ width: `${progress}%` }}
+            />
+          </div>
+        </div>
+      )}
 
       {error && (
         <div className="p-4 rounded-2xl bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 flex items-start gap-3">
