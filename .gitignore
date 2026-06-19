@@ -4,3 +4,4 @@ huntlog.db
 .claude/
 .env
 dist/
+.vercel

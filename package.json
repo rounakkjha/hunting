@@ -71,6 +71,7 @@
     "@vitejs/plugin-react": "4.7.0",
     "sharp": "^0.35.1",
     "tailwindcss": "4.1.12",
+    "vercel": "^54.14.2",
     "vite": "6.3.5"
   },
   "peerDependencies": {
