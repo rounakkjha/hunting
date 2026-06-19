@@ -1,4 +1,5 @@
-const API_KEY = (import.meta as any).env.VITE_GEMINI_API_KEY;
+const OLLAMA_URL = ((import.meta as any).env.VITE_OLLAMA_URL as string) || 'http://localhost:11434';
+const OLLAMA_MODEL = ((import.meta as any).env.VITE_OLLAMA_MODEL as string) || 'llama3.2';
 
 const SYSTEM_PROMPT = `You are a senior technical recruiter, ATS (Applicant Tracking System) analyst, and resume coach combined into one engine. Your job is to score how well a candidate's resume matches a specific job description, and to tell the candidate exactly how to improve their resume for that role.
 
@@ -182,49 +183,43 @@ export interface MatchError {
 export type MatchResponse = MatchResult | MatchError;
 
 export async function matchResumeWithJD(resume: string, jobDescription: string): Promise<MatchResponse> {
-  if (!API_KEY) {
-    throw new Error('Gemini API key not configured. Add VITE_GEMINI_API_KEY to your environment.');
-  }
+  const userPrompt = `RESUME:\n${resume}\n\nJOB_DESCRIPTION:\n${jobDescription}`;
 
-  const userText = `RESUME:\n${resume}\n\nJOB_DESCRIPTION:\n${jobDescription}`;
-
-  const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}`,
-    {
+  try {
+    const res = await fetch(`${OLLAMA_URL}/api/generate`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        systemInstruction: {
-          parts: [{ text: SYSTEM_PROMPT }],
-        },
-        contents: [
-          {
-            role: 'user',
-            parts: [{ text: userText }],
-          },
-        ],
-        generationConfig: {
-          temperature: 0.2,
-          responseMimeType: 'application/json',
-        },
+        model: OLLAMA_MODEL,
+        system: SYSTEM_PROMPT,
+        prompt: userPrompt,
+        stream: false,
+        format: 'json',
       }),
+    });
+
+    if (!res.ok) {
+      const errorText = await res.text().catch(() => res.statusText);
+      throw new Error(`Ollama error (${res.status}): ${errorText}`);
     }
-  );
 
-  if (!res.ok) {
-    const errorText = await res.text().catch(() => res.statusText);
-    throw new Error(`Gemini API error (${res.status}): ${errorText}`);
-  }
+    const data = await res.json();
+    const text = data.response as string;
+    if (!text) {
+      throw new Error('No response from Ollama.');
+    }
 
-  const data = await res.json();
-  const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-  if (!text) {
-    throw new Error('No response from Gemini.');
-  }
-
-  try {
-    return JSON.parse(text) as MatchResponse;
-  } catch {
-    throw new Error('Failed to parse Gemini response as JSON.');
+    try {
+      return JSON.parse(text) as MatchResponse;
+    } catch {
+      throw new Error('Failed to parse Ollama response as JSON.');
+    }
+  } catch (err: any) {
+    if (err.message?.includes('fetch') || err.message?.includes('Failed to fetch')) {
+      throw new Error(
+        'Could not connect to Ollama. Make sure Ollama is running (ollama serve) and the model is pulled.'
+      );
+    }
+    throw err;
   }
 }

@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 import { FileText, Upload, Sparkles, Loader2, CheckCircle, XCircle, AlertCircle, Target, Wand2, Lightbulb, TrendingUp, ArrowRight } from 'lucide-react';
-import { matchResumeWithJD, type MatchResponse } from '../utils/gemini';
+import { matchResumeWithJD, type MatchResponse } from '../utils/ai';
 import { extractTextFromFile } from '../utils/fileParser';
 
 export default function ResumeMatcher() {
@@ -110,7 +110,7 @@ export default function ResumeMatcher() {
           )}
         </button>
         <p className="text-xs text-muted-foreground">
-          Powered by Google Gemini. Free tier — results may take a few seconds.
+          Powered by local Ollama. Make sure Ollama is running on your machine.
         </p>
       </div>
 
