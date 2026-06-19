@@ -46,6 +46,12 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  // Only handle HTTP/HTTPS requests (ignore chrome-extension:// and other schemes)
+  const requestUrl = new URL(event.request.url);
+  if (requestUrl.protocol !== 'http:' && requestUrl.protocol !== 'https:') {
+    return;
+  }
+
   // Skip API requests
   if (event.request.url.includes('/api/') || event.request.url.includes('supabase')) {
     return;
