@@ -202,7 +202,11 @@ function InputCard({
 }
 
 function ScoreHeader({ result }: { result: Exclude<MatchResponse, { error: true }> }) {
-  const score = result.overall_match_percentage;
+  const score = typeof result.overall_match_percentage === 'number' ? result.overall_match_percentage : 0;
+  const verdict = result.verdict || 'no verdict';
+  const summary = result.summary || '';
+  const gateApplied = result.gate_applied || 'none';
+  const projected = typeof result.projected_score_if_applied === 'number' ? result.projected_score_if_applied : score;
   let color = 'text-red-500';
   let bg = 'bg-red-500/10';
   let border = 'border-red-500/20';
@@ -230,17 +234,17 @@ function ScoreHeader({ result }: { result: Exclude<MatchResponse, { error: true 
       <div className="flex-1 space-y-2">
         <div className="flex items-center gap-2">
           <Target className={`w-5 h-5 ${color}`} />
-          <h3 className="text-lg font-bold capitalize">{result.verdict}</h3>
+          <h3 className="text-lg font-bold capitalize">{verdict}</h3>
         </div>
-        <p className="text-sm text-muted-foreground leading-relaxed">{result.summary}</p>
-        {result.gate_applied && result.gate_applied !== 'none' && (
+        <p className="text-sm text-muted-foreground leading-relaxed">{summary}</p>
+        {gateApplied && gateApplied !== 'none' && (
           <p className="text-xs text-muted-foreground">
-            <span className="font-medium">Gate applied:</span> {result.gate_applied}
+            <span className="font-medium">Gate applied:</span> {gateApplied}
           </p>
         )}
         <p className="text-sm font-medium">
           Projected score after rewording:{' '}
-          <span className="text-primary">{result.projected_score_if_applied}%</span>
+          <span className="text-primary">{projected}%</span>
         </p>
       </div>
     </div>
@@ -248,7 +252,8 @@ function ScoreHeader({ result }: { result: Exclude<MatchResponse, { error: true 
 }
 
 function CategoryScores({ scores }: { scores: Record<string, { score: number; weight: number; rationale: string }> }) {
-  const entries = Object.entries(scores);
+  const safeScores = scores || {};
+  const entries = Object.entries(safeScores);
   return (
     <div className="bg-card border border-border/50 rounded-2xl p-4 sm:p-5 shadow-sm space-y-4">
       <div className="flex items-center gap-2">
@@ -265,16 +270,16 @@ function CategoryScores({ scores }: { scores: Record<string, { score: number; we
             >
               <div className="flex items-center justify-between text-xs">
                 <span className="font-medium">{label}</span>
-                <span className="text-muted-foreground">{Math.round(value.weight * 100)}%</span>
+                <span className="text-muted-foreground">{Math.round((value.weight || 0) * 100)}%</span>
               </div>
               <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
                 <div
                   className="h-full bg-gradient-to-r from-primary to-accent rounded-full"
-                  style={{ width: `${value.score}%` }}
+                  style={{ width: `${value.score || 0}%` }}
                 />
               </div>
               <div className="flex items-center justify-between text-xs">
-                <span className="font-bold text-primary">{value.score}/100</span>
+                <span className="font-bold text-primary">{value.score || 0}/100</span>
               </div>
               {value.rationale && (
                 <p className="text-[11px] text-muted-foreground leading-relaxed">{value.rationale}</p>
@@ -294,6 +299,7 @@ function RequirementLists({
   mustHaves: any[];
   niceToHaves: any[];
 }) {
+  const normalize = (arr: any[]) => (Array.isArray(arr) ? arr : []);
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
       <div className="bg-card border border-border/50 rounded-2xl p-4 sm:p-5 shadow-sm space-y-3">
@@ -302,7 +308,7 @@ function RequirementLists({
           Must-Haves
         </h3>
         <div className="space-y-2 max-h-96 overflow-y-auto pr-1">
-          {mustHaves.map((item, i) => (
+          {normalize(mustHaves).map((item, i) => (
             <RequirementItem key={i} item={item} />
           ))}
         </div>
@@ -313,7 +319,7 @@ function RequirementLists({
           Nice-To-Haves
         </h3>
         <div className="space-y-2 max-h-96 overflow-y-auto pr-1">
-          {niceToHaves.map((item, i) => (
+          {normalize(niceToHaves).map((item, i) => (
             <RequirementItem key={i} item={item} />
           ))}
         </div>
@@ -323,21 +329,31 @@ function RequirementLists({
 }
 
 function RequirementItem({ item }: { item: any }) {
-  const isMet = item.status === 'met';
-  const isPartial = item.status === 'partial';
+  if (typeof item === 'string') {
+    return (
+      <div className="p-3 bg-background/50 rounded-xl border border-border/40 text-sm">
+        <p className="font-medium">{item}</p>
+      </div>
+    );
+  }
+
+  const req = item?.requirement || item?.text || 'Unnamed requirement';
+  const status = item?.status || 'missing';
+  const isMet = status === 'met';
+  const isPartial = status === 'partial';
   const icon = isMet ? <CheckCircle className="w-4 h-4 text-emerald-500" /> : isPartial ? <AlertCircle className="w-4 h-4 text-amber-500" /> : <XCircle className="w-4 h-4 text-red-500" />;
   return (
     <div className="p-3 bg-background/50 rounded-xl border border-border/40 text-sm">
       <div className="flex items-start gap-2">
         <span className="shrink-0 mt-0.5">{icon}</span>
         <div className="flex-1 min-w-0">
-          <p className="font-medium">{item.requirement}</p>
-          {item.importance && (
+          <p className="font-medium">{req}</p>
+          {item?.importance && (
             <span className={`text-[10px] uppercase tracking-wider font-semibold ${item.importance === 'critical' ? 'text-red-500' : 'text-muted-foreground'}`}>
               {item.importance}
             </span>
           )}
-          {item.evidence && (
+          {item?.evidence && (
             <p className="text-xs text-muted-foreground mt-1 italic border-l-2 border-primary/30 pl-2">
               “{item.evidence}”
             </p>
@@ -353,15 +369,16 @@ function KeywordLists({
   strengths,
   gaps,
 }: {
-  missing: string[];
-  strengths: string[];
-  gaps: string[];
+  missing: any[];
+  strengths: any[];
+  gaps: any[];
 }) {
+  const normalize = (arr: any[]) => (Array.isArray(arr) ? arr : []);
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
-      <ListCard title="Missing ATS Keywords" items={missing} color="red" />
-      <ListCard title="Strengths" items={strengths} color="emerald" />
-      <ListCard title="Biggest Gaps" items={gaps} color="orange" />
+      <ListCard title="Missing ATS Keywords" items={normalize(missing)} color="red" />
+      <ListCard title="Strengths" items={normalize(strengths)} color="emerald" />
+      <ListCard title="Biggest Gaps" items={normalize(gaps)} color="orange" />
     </div>
   );
 }
@@ -372,7 +389,7 @@ function ListCard({
   color,
 }: {
   title: string;
-  items: string[];
+  items: any[];
   color: 'red' | 'emerald' | 'orange';
 }) {
   const colorClasses = {
@@ -383,6 +400,17 @@ function ListCard({
 
   if (!items.length) return null;
 
+  const renderItem = (item: any): string => {
+    if (typeof item === 'string') return item;
+    if (item && typeof item === 'object') {
+      if (item.issue && item.why_it_matters) {
+        return `${item.issue} — ${item.why_it_matters}`;
+      }
+      return Object.values(item).map((v) => (typeof v === 'string' ? v : JSON.stringify(v))).join(' — ');
+    }
+    return String(item);
+  };
+
   return (
     <div className="bg-card border border-border/50 rounded-2xl p-4 sm:p-5 shadow-sm space-y-3">
       <h3 className="font-bold text-sm">{title}</h3>
@@ -392,7 +420,7 @@ function ListCard({
             key={i}
             className={`text-xs px-2.5 py-2 rounded-lg border ${colorClasses[color]}`}
           >
-            {item}
+            {renderItem(item)}
           </li>
         ))}
       </ul>
@@ -404,7 +432,8 @@ function Improvements({ improvements }: { improvements: any[] }) {
   if (!improvements.length) return null;
 
   const priorityOrder = { high: 0, medium: 1, low: 2 };
-  const sorted = [...improvements].sort((a, b) => priorityOrder[a.priority] - priorityOrder[b.priority]);
+  const valid = improvements.filter((item) => item && typeof item === 'object');
+  const sorted = [...valid].sort((a, b) => priorityOrder[a.priority] - priorityOrder[b.priority]);
 
   return (
     <div className="bg-card border border-border/50 rounded-2xl p-4 sm:p-5 shadow-sm space-y-4">
@@ -432,11 +461,11 @@ function Improvements({ improvements }: { improvements: any[] }) {
               </span>
               <span className="text-xs text-muted-foreground">{item.category}</span>
             </div>
-            <p className="text-sm font-medium">{item.issue}</p>
-            <p className="text-xs text-muted-foreground">{item.why_it_matters}</p>
+            <p className="text-sm font-medium">{item.issue || 'No issue provided'}</p>
+            <p className="text-xs text-muted-foreground">{item.why_it_matters || ''}</p>
             <p className="text-sm text-primary flex items-start gap-1.5">
               <ArrowRight className="w-4 h-4 shrink-0 mt-0.5" />
-              {item.action}
+              {item.action || 'No action provided'}
             </p>
             {item.example_before && item.example_after && (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2 text-xs">
