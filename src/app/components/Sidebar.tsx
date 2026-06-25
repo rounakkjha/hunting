@@ -19,6 +19,7 @@ import {
   Users,
   Briefcase,
   Key,
+  FileSearch,
 } from 'lucide-react';
 import ThemeToggle from './ThemeToggle';
 
@@ -83,6 +84,7 @@ export default function Sidebar({ activeSection, setActiveSection, onLogout, onC
       title: 'More',
       items: [
         { id: 'analytics', icon: BarChart3, label: 'Analytics' },
+        { id: 'matcher', icon: FileSearch, label: 'Resume Matcher' },
         ...(isSuperAdmin ? [{ id: 'users', icon: Users, label: 'User Management' }] : []),
         { id: 'trash', icon: Trash2, label: 'Trash' },
       ],

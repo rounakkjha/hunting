@@ -1,5 +1,6 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useMemo } from 'react';
 import { format, subDays, eachDayOfInterval } from 'date-fns';
+import useNow from '../hooks/useNow';
 import {
   BarChart,
   Bar,
@@ -12,7 +13,7 @@ import {
   Pie,
   Cell,
 } from 'recharts';
-import { TrendingUp, TrendingDown, Activity, Clock, Target, Zap, CheckCircle2, Flame, MailCheck, Mail } from 'lucide-react';
+import { TrendingUp, TrendingDown, Activity, Clock, Target, Zap, CheckCircle2, Flame, MailCheck, Mail, MessageSquare, Users } from 'lucide-react';
 import type { UserData } from '../App';
 
 interface AdvancedStatsProps {
@@ -21,50 +22,50 @@ interface AdvancedStatsProps {
 }
 
 export default function AdvancedStats({ userData, isLoading }: AdvancedStatsProps) {
-  const [currentTime, setCurrentTime] = useState(format(new Date(), 'hh:mm a'));
-
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentTime(format(new Date(), 'hh:mm a'));
-    }, 1000);
-    return () => clearInterval(timer);
-  }, []);
+  const now = useNow(1000);
+  const currentTime = format(now, 'hh:mm a');
 
   // Weekly activity data
   const last7Days = eachDayOfInterval({
-    start: subDays(new Date(), 6),
-    end: new Date(),
+    start: subDays(now, 6),
+    end: now,
   });
 
   const weeklyData = last7Days.map((day, index) => {
     const dayStr = format(day, 'yyyy-MM-dd');
-    const apps = userData.applications.filter((a) => a.date === dayStr).length;
-    const emails = userData.coldEmails.filter((e) => e.date === dayStr).length;
-    const linkedin = userData.linkedInOutreach.filter((l) => l.date === dayStr).length;
+    const applications = userData.applications.filter((a) => a.date === dayStr).length;
+    const coldEmails = userData.coldEmails.filter((e) => e.date === dayStr).length;
+    const linkedInOutreach = userData.linkedInOutreach.filter((l) => l.date === dayStr).length;
+    const targetCompanies = userData.targetCompanies.filter((t) => t.date === dayStr).length;
+    const interviews = userData.interviews.filter((i) => i.createdAt === dayStr).length;
 
     return {
       name: `${format(day, 'EEE')}-${index}`,
       day: format(day, 'EEE'),
       fullDate: dayStr,
-      applications: apps,
-      emails: emails,
-      linkedin: linkedin,
-      total: apps + emails + linkedin,
+      applications,
+      coldEmails,
+      linkedInOutreach,
+      targetCompanies,
+      interviews,
+      total: applications + coldEmails + linkedInOutreach + targetCompanies + interviews,
     };
   });
 
   // Previous week data for trend comparison
   const prev7Days = eachDayOfInterval({
-    start: subDays(new Date(), 13),
-    end: subDays(new Date(), 7),
+    start: subDays(now, 13),
+    end: subDays(now, 7),
   });
 
   const prevWeekTotal = prev7Days.reduce((sum, day) => {
     const dayStr = format(day, 'yyyy-MM-dd');
-    const apps = userData.applications.filter((a) => a.date === dayStr).length;
-    const emails = userData.coldEmails.filter((e) => e.date === dayStr).length;
-    const linkedin = userData.linkedInOutreach.filter((l) => l.date === dayStr).length;
-    return sum + apps + emails + linkedin;
+    const applications = userData.applications.filter((a) => a.date === dayStr).length;
+    const coldEmails = userData.coldEmails.filter((e) => e.date === dayStr).length;
+    const linkedInOutreach = userData.linkedInOutreach.filter((l) => l.date === dayStr).length;
+    const targetCompanies = userData.targetCompanies.filter((t) => t.date === dayStr).length;
+    const interviews = userData.interviews.filter((i) => i.createdAt === dayStr).length;
+    return sum + applications + coldEmails + linkedInOutreach + targetCompanies + interviews;
   }, 0);
 
   const thisWeekTotal = weeklyData.reduce((sum, day) => sum + day.total, 0);
@@ -73,10 +74,14 @@ export default function AdvancedStats({ userData, isLoading }: AdvancedStatsProp
     ? Math.round(((thisWeekTotal - prevWeekTotal) / prevWeekTotal) * 100)
     : thisWeekTotal > 0 ? 100 : 0;
 
-  // Real response rate from cold emails
+  // Response rate: cold emails + LinkedIn outreach
   const totalEmails = userData.coldEmails.length;
   const respondedEmails = userData.coldEmails.filter((e) => e.gotResponse).length;
-  const responseRate = totalEmails > 0 ? Math.round((respondedEmails / totalEmails) * 100) : 0;
+  const totalLinkedIn = userData.linkedInOutreach.length;
+  const respondedLinkedIn = userData.linkedInOutreach.filter((l) => l.gotResponse).length;
+  const totalOutreach = totalEmails + totalLinkedIn;
+  const totalResponded = respondedEmails + respondedLinkedIn;
+  const responseRate = totalOutreach > 0 ? Math.round((totalResponded / totalOutreach) * 100) : 0;
 
   // Todo completion rate
   const totalTodos = userData.todos.length;
@@ -87,25 +92,45 @@ export default function AdvancedStats({ userData, isLoading }: AdvancedStatsProp
   const streak = useMemo(() => {
     let count = 0;
     for (let i = 0; i < 30; i++) {
-      const dayStr = format(subDays(new Date(), i), 'yyyy-MM-dd');
+      const dayStr = format(subDays(now, i), 'yyyy-MM-dd');
       const hasActivity =
         userData.applications.some((a) => a.date === dayStr) ||
         userData.coldEmails.some((e) => e.date === dayStr) ||
-        userData.linkedInOutreach.some((l) => l.date === dayStr);
+        userData.linkedInOutreach.some((l) => l.date === dayStr) ||
+        userData.targetCompanies.some((t) => t.date === dayStr) ||
+        userData.interviews.some((i) => i.createdAt === dayStr);
       if (hasActivity) count++;
       else if (i > 0) break; // allow today to have no activity yet
     }
     return count;
   }, [userData]);
 
-  // Activity distribution
+  // Application source distribution
+  const apps = userData.applications.filter((a) => !a.isQuickApply);
+  const sourceLinkedIn = apps.filter((a) => a.source?.toLowerCase() === 'linkedin').length;
+  const sourceNaukri = apps.filter((a) => a.source?.toLowerCase() === 'naukri').length;
+  const sourceReferral = apps.filter((a) => a.source?.toLowerCase() === 'referral').length;
+  const sourceOthers = apps.filter((a) => !['linkedin', 'naukri', 'referral'].includes(a.source?.toLowerCase() ?? '')).length;
+
   const activityData = [
-    { id: 'activity-applications', name: 'Applications', value: userData.applications.length, color: '#6366f1' },
-    { id: 'activity-emails', name: 'Cold Emails', value: userData.coldEmails.length, color: '#818cf8' },
-    { id: 'activity-linkedin', name: 'LinkedIn', value: userData.linkedInOutreach.length, color: '#a5b4fc' },
+    { id: 'source-linkedin', name: 'LinkedIn', value: sourceLinkedIn, color: '#4f46e5' },
+    { id: 'source-naukri', name: 'Naukri', value: sourceNaukri, color: '#6366f1' },
+    { id: 'source-referral', name: 'Referral', value: sourceReferral, color: '#818cf8' },
+    { id: 'source-others', name: 'Others', value: sourceOthers, color: '#a5b4fc' },
   ].filter(item => item.value > 0);
 
-  const totalActivity = userData.applications.length + userData.coldEmails.length + userData.linkedInOutreach.length;
+  const totalActivity = apps.length;
+
+  // LinkedIn outreach breakdown
+  const linkedInAlumni = userData.linkedInOutreach.filter((l) => l.isAlumni).length;
+  const linkedInReplied = userData.linkedInOutreach.filter((l) => l.gotResponse).length;
+  const linkedInRepliedAlumni = userData.linkedInOutreach.filter((l) => l.gotResponse && l.isAlumni).length;
+
+  // Referral support breakdown
+  const referralsAsked = userData.targetCompanies.filter((t) => t.referralStatus === 'asked').length;
+  const referralsAwaiting = userData.targetCompanies.filter((t) => t.referralStatus === 'awaiting').length;
+  const referralsDone = userData.targetCompanies.filter((t) => t.referralStatus === 'done').length;
+  const totalReferrals = referralsAsked + referralsAwaiting + referralsDone;
 
   // Skeleton card for loading state
   const SkeletonCard = () => (
@@ -150,18 +175,18 @@ export default function AdvancedStats({ userData, isLoading }: AdvancedStatsProp
   return (
     <div className="space-y-6">
       {/* Top Row: Mini Stat Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
         {/* Response Rate */}
-        <div className="relative group">
+        <div className="relative group h-full">
           <div className="absolute -inset-0.5 bg-gradient-to-r from-indigo-500/20 to-indigo-400/20 rounded-2xl opacity-0 group-hover:opacity-100 blur transition duration-500 hidden sm:block" />
-          <div className="relative bg-card border border-border/50 rounded-2xl shadow-lg overflow-hidden backdrop-blur-sm p-3.5 sm:p-5">
+          <div className="relative bg-card border border-border/50 rounded-2xl shadow-lg overflow-hidden backdrop-blur-sm p-3.5 sm:p-5 h-full">
             <div className="flex items-center justify-between mb-2 sm:mb-3">
               <div className="p-2 sm:p-2.5 bg-indigo-500/10 rounded-xl ring-1 ring-indigo-500/20">
                 <MailCheck className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-indigo-500" strokeWidth={2.5} />
               </div>
-              {totalEmails > 0 && (
+              {totalOutreach > 0 && (
                 <span className="text-[10px] sm:text-xs font-semibold text-muted-foreground">
-                  {respondedEmails}/{totalEmails}
+                  {totalResponded}/{totalOutreach}
                 </span>
               )}
             </div>
@@ -170,7 +195,7 @@ export default function AdvancedStats({ userData, isLoading }: AdvancedStatsProp
               <span className="text-2xl sm:text-3xl font-bold text-indigo-500">{responseRate}</span>
               <span className="text-sm sm:text-lg text-muted-foreground">%</span>
             </div>
-            {totalEmails > 0 && (
+            {totalOutreach > 0 && (
               <div className="mt-3 h-1.5 bg-muted/50 rounded-full overflow-hidden">
                 <div
                   className="h-full bg-gradient-to-r from-indigo-500 to-indigo-400 rounded-full transition-all duration-700"
@@ -181,40 +206,10 @@ export default function AdvancedStats({ userData, isLoading }: AdvancedStatsProp
           </div>
         </div>
 
-        {/* Todo Completion */}
-        <div className="relative group">
-          <div className="absolute -inset-0.5 bg-gradient-to-r from-indigo-400/20 to-indigo-300/20 rounded-2xl opacity-0 group-hover:opacity-100 blur transition duration-500 hidden sm:block" />
-          <div className="relative bg-card border border-border/50 rounded-2xl shadow-lg overflow-hidden backdrop-blur-sm p-3.5 sm:p-5">
-            <div className="flex items-center justify-between mb-2 sm:mb-3">
-              <div className="p-2 sm:p-2.5 bg-indigo-400/10 rounded-xl ring-1 ring-indigo-400/20">
-                <CheckCircle2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-indigo-400" strokeWidth={2.5} />
-              </div>
-              {totalTodos > 0 && (
-                <span className="text-[10px] sm:text-xs font-semibold text-muted-foreground">
-                  {completedTodos}/{totalTodos}
-                </span>
-              )}
-            </div>
-            <p className="text-[10px] sm:text-xs text-muted-foreground font-medium mb-1">Tasks Done</p>
-            <div className="flex items-baseline gap-1">
-              <span className="text-2xl sm:text-3xl font-bold text-indigo-400">{todoCompletionRate}</span>
-              <span className="text-sm sm:text-lg text-muted-foreground">%</span>
-            </div>
-            {totalTodos > 0 && (
-              <div className="mt-3 h-1.5 bg-muted/50 rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-gradient-to-r from-indigo-400 to-indigo-300 rounded-full transition-all duration-700"
-                  style={{ width: `${todoCompletionRate}%` }}
-                />
-              </div>
-            )}
-          </div>
-        </div>
-
         {/* Activity Streak */}
-        <div className="relative group">
+        <div className="relative group h-full">
           <div className="absolute -inset-0.5 bg-gradient-to-r from-indigo-600/20 to-indigo-500/20 rounded-2xl opacity-0 group-hover:opacity-100 blur transition duration-500 hidden sm:block" />
-          <div className="relative bg-card border border-border/50 rounded-2xl shadow-lg overflow-hidden backdrop-blur-sm p-3.5 sm:p-5">
+          <div className="relative bg-card border border-border/50 rounded-2xl shadow-lg overflow-hidden backdrop-blur-sm p-3.5 sm:p-5 h-full">
             <div className="flex items-center justify-between mb-2 sm:mb-3">
               <div className="p-2 sm:p-2.5 bg-indigo-600/10 rounded-xl ring-1 ring-indigo-600/20">
                 <Flame className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-indigo-500" strokeWidth={2.5} />
@@ -237,7 +232,9 @@ export default function AdvancedStats({ userData, isLoading }: AdvancedStatsProp
                 const hasActivity =
                   userData.applications.some((a) => a.date === dayStr) ||
                   userData.coldEmails.some((e) => e.date === dayStr) ||
-                  userData.linkedInOutreach.some((l) => l.date === dayStr);
+                  userData.linkedInOutreach.some((l) => l.date === dayStr) ||
+                  userData.targetCompanies.some((t) => t.date === dayStr) ||
+                  userData.interviews.some((i) => i.createdAt === dayStr);
                 return (
                   <div
                     key={i}
@@ -252,9 +249,9 @@ export default function AdvancedStats({ userData, isLoading }: AdvancedStatsProp
         </div>
 
         {/* Current Time */}
-        <div className="relative group">
+        <div className="relative group h-full">
           <div className="absolute -inset-0.5 bg-gradient-to-r from-primary/40 to-accent/40 rounded-2xl blur opacity-75 group-hover:opacity-100 transition duration-500" />
-          <div className="relative bg-gradient-to-br from-primary via-primary to-accent rounded-2xl shadow-xl overflow-hidden p-3.5 sm:p-5 text-white">
+          <div className="relative bg-gradient-to-br from-primary via-primary to-accent rounded-2xl shadow-xl overflow-hidden p-3.5 sm:p-5 text-white h-full">
             <div className="flex items-center gap-2 mb-3">
               <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm">
                 <Clock className="w-4 h-4" strokeWidth={2.5} />
@@ -264,8 +261,103 @@ export default function AdvancedStats({ userData, isLoading }: AdvancedStatsProp
               {currentTime}
             </div>
             <div className="text-xs opacity-75 font-medium">
-              {format(new Date(), 'EEE, MMM dd')}
+              {format(now, 'EEE, MMM dd')}
             </div>
+          </div>
+        </div>
+      </div>
+
+      {/* LinkedIn Outreach + Referral Support */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
+        {/* LinkedIn Outreach Breakdown */}
+        <div className="relative group h-full">
+          <div className="absolute -inset-0.5 bg-gradient-to-r from-primary/20 to-accent/20 rounded-2xl opacity-0 group-hover:opacity-100 blur transition duration-500 hidden sm:block" />
+          <div className="relative bg-card border border-border/50 rounded-2xl shadow-lg overflow-hidden backdrop-blur-sm p-3.5 sm:p-5 h-full">
+            <div className="flex items-center justify-between mb-3 sm:mb-4">
+              <div className="flex items-center gap-2">
+                <div className="p-2 sm:p-2.5 bg-primary/10 rounded-xl ring-1 ring-primary/20">
+                  <MessageSquare className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-primary" strokeWidth={2.5} />
+                </div>
+                <p className="text-sm font-semibold">LinkedIn Outreach</p>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3 sm:gap-4">
+              <div>
+                <p className="text-[10px] sm:text-xs text-muted-foreground font-medium mb-1">People Reached</p>
+                <div className="flex items-baseline gap-1">
+                  <span className="text-2xl sm:text-3xl font-bold text-primary">{totalLinkedIn}</span>
+                  <span className="text-xs text-muted-foreground">total</span>
+                </div>
+              </div>
+              <div>
+                <p className="text-[10px] sm:text-xs text-muted-foreground font-medium mb-1">Alumni</p>
+                <div className="flex items-baseline gap-1">
+                  <span className="text-2xl sm:text-3xl font-bold text-accent">{linkedInAlumni}</span>
+                  <span className="text-xs text-muted-foreground">reached</span>
+                </div>
+              </div>
+              <div>
+                <p className="text-[10px] sm:text-xs text-muted-foreground font-medium mb-1">Replied</p>
+                <div className="flex items-baseline gap-1">
+                  <span className="text-2xl sm:text-3xl font-bold text-indigo-400">{linkedInReplied}</span>
+                  <span className="text-xs text-muted-foreground">responses</span>
+                </div>
+              </div>
+              <div>
+                <p className="text-[10px] sm:text-xs text-muted-foreground font-medium mb-1">Replied Alumni</p>
+                <div className="flex items-baseline gap-1">
+                  <span className="text-2xl sm:text-3xl font-bold text-accent-light">{linkedInRepliedAlumni}</span>
+                  <span className="text-xs text-muted-foreground">responses</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Referral Support */}
+        <div className="relative group h-full">
+          <div className="absolute -inset-0.5 bg-gradient-to-r from-primary/20 to-accent/20 rounded-2xl opacity-0 group-hover:opacity-100 blur transition duration-500 hidden sm:block" />
+          <div className="relative bg-card border border-border/50 rounded-2xl shadow-lg overflow-hidden backdrop-blur-sm p-3.5 sm:p-5 h-full">
+            <div className="flex items-center justify-between mb-3 sm:mb-4">
+              <div className="flex items-center gap-2">
+                <div className="p-2 sm:p-2.5 bg-primary/10 rounded-xl ring-1 ring-primary/20">
+                  <Users className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-primary" strokeWidth={2.5} />
+                </div>
+                <p className="text-sm font-semibold">Referral Support</p>
+              </div>
+              {totalReferrals > 0 && (
+                <span className="text-[10px] sm:text-xs font-semibold text-muted-foreground">
+                  {referralsDone}/{totalReferrals} done
+                </span>
+              )}
+            </div>
+            <div className="grid grid-cols-3 gap-3 sm:gap-4">
+              <div className="text-center">
+                <p className="text-[10px] sm:text-xs text-muted-foreground font-medium mb-1">Asked</p>
+                <div className="flex items-baseline justify-center gap-1">
+                  <span className="text-2xl sm:text-3xl font-bold text-primary">{referralsAsked}</span>
+                </div>
+              </div>
+              <div className="text-center">
+                <p className="text-[10px] sm:text-xs text-muted-foreground font-medium mb-1">Awaiting</p>
+                <div className="flex items-baseline justify-center gap-1">
+                  <span className="text-2xl sm:text-3xl font-bold text-accent">{referralsAwaiting}</span>
+                </div>
+              </div>
+              <div className="text-center">
+                <p className="text-[10px] sm:text-xs text-muted-foreground font-medium mb-1">Done</p>
+                <div className="flex items-baseline justify-center gap-1">
+                  <span className="text-2xl sm:text-3xl font-bold text-indigo-400">{referralsDone}</span>
+                </div>
+              </div>
+            </div>
+            {totalReferrals > 0 && (
+              <div className="mt-4 flex h-2 rounded-full overflow-hidden">
+                <div className="h-full bg-primary" style={{ width: `${(referralsAsked / totalReferrals) * 100}%` }} />
+                <div className="h-full bg-accent" style={{ width: `${(referralsAwaiting / totalReferrals) * 100}%` }} />
+                <div className="h-full bg-accent-light" style={{ width: `${(referralsDone / totalReferrals) * 100}%` }} />
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -282,10 +374,12 @@ export default function AdvancedStats({ userData, isLoading }: AdvancedStatsProp
                 <p className="text-xs sm:text-sm text-muted-foreground mt-1">Your job search momentum</p>
               </div>
               <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
-                <div className="flex items-center gap-3 sm:gap-4 text-xs font-medium text-muted-foreground">
-                  <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-indigo-500" />Apps</span>
-                  <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-indigo-400" />Emails</span>
-                  <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-indigo-300" />LinkedIn</span>
+                <div className="flex items-center gap-2 sm:gap-3 text-xs font-medium text-muted-foreground flex-wrap">
+                  <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: '#4f46e5' }} />Jobs Applied</span>
+                  <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: '#6366f1' }} />Cold Emails</span>
+                  <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: '#818cf8' }} />LI Outreach</span>
+                  <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: '#a5b4fc' }} />Targets</span>
+                  <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: '#c7d2fe' }} />Interviews</span>
                 </div>
                 <div className="flex items-center gap-2 px-3 py-1.5 bg-primary/10 rounded-lg ring-1 ring-primary/20">
                   <Zap className="w-3.5 h-3.5 text-primary" />
@@ -321,12 +415,17 @@ export default function AdvancedStats({ userData, isLoading }: AdvancedStatsProp
                       borderRadius: '16px',
                       padding: '12px 16px',
                       boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
+                      color: 'hsl(var(--card-foreground))',
                     }}
+                    labelStyle={{ color: 'hsl(var(--card-foreground))', fontWeight: 600 }}
+                    itemStyle={{ color: 'hsl(var(--card-foreground))' }}
                     cursor={{ fill: 'rgba(99, 102, 241, 0.08)', radius: 8 }}
                   />
-                  <Bar dataKey="applications" stackId="a" fill="#6366f1" radius={[0, 0, 0, 0]} name="Applications" />
-                  <Bar dataKey="emails" stackId="a" fill="#818cf8" radius={[0, 0, 0, 0]} name="Emails" />
-                  <Bar dataKey="linkedin" stackId="a" fill="#a5b4fc" radius={[6, 6, 0, 0]} name="LinkedIn" />
+                  <Bar dataKey="applications" stackId="a" fill="#4f46e5" radius={[0, 0, 0, 0]} name="Jobs Applied" />
+                  <Bar dataKey="coldEmails" stackId="a" fill="#6366f1" radius={[0, 0, 0, 0]} name="Cold Emails" />
+                  <Bar dataKey="linkedInOutreach" stackId="a" fill="#818cf8" radius={[0, 0, 0, 0]} name="LinkedIn Outreach" />
+                  <Bar dataKey="targetCompanies" stackId="a" fill="#a5b4fc" radius={[0, 0, 0, 0]} name="Target Companies" />
+                  <Bar dataKey="interviews" stackId="a" fill="#c7d2fe" radius={[6, 6, 0, 0]} name="Interviews" />
                 </BarChart>
               </ResponsiveContainer>
             ) : (
@@ -350,9 +449,9 @@ export default function AdvancedStats({ userData, isLoading }: AdvancedStatsProp
                 <div className="p-2.5 bg-indigo-500/10 rounded-xl ring-1 ring-indigo-500/20">
                   <Activity className="w-4 h-4 text-indigo-500" strokeWidth={2.5} />
                 </div>
-                <h4 className="font-bold">Distribution</h4>
+                <h4 className="font-bold">App Sources</h4>
               </div>
-              <span className="text-sm font-semibold text-muted-foreground">{totalActivity} total</span>
+              <span className="text-sm font-semibold text-muted-foreground">{totalActivity} apps</span>
             </div>
 
             {activityData.length > 0 ? (
@@ -380,7 +479,10 @@ export default function AdvancedStats({ userData, isLoading }: AdvancedStatsProp
                         border: '1px solid hsl(var(--border))',
                         borderRadius: '12px',
                         padding: '8px 12px',
+                        color: 'hsl(var(--card-foreground))',
                       }}
+                      labelStyle={{ color: 'hsl(var(--card-foreground))', fontWeight: 600 }}
+                      itemStyle={{ color: 'hsl(var(--card-foreground))' }}
                     />
                   </PieChart>
                 </ResponsiveContainer>

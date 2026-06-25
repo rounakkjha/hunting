@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { format } from 'date-fns';
 import {
   Building2,
   Plus,
@@ -60,7 +61,7 @@ export default function TargetCompanies({
   const [newRole, setNewRole] = useState('');
   const [newJobUrl, setNewJobUrl] = useState('');
   const [newReferralStatus, setNewReferralStatus] = useState<ReferralStatus | ''>('');
-  const [newDate, setNewDate] = useState(new Date().toISOString().split('T')[0]);
+  const [newDate, setNewDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [showAddForm, setShowAddForm] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [contactForms, setContactForms] = useState<Record<string, { name: string; email: string; role: string; linkedinUrl: string }>>({})
@@ -74,15 +75,22 @@ export default function TargetCompanies({
   const [showArchived, setShowArchived] = useState(false);
   const [selectedCompanies, setSelectedCompanies] = useState<Set<string>>(new Set());
   const [searchQuery, setSearchQuery] = useState('');
+  const [referralFilter, setReferralFilter] = useState<ReferralStatus | 'no_filter' | 'all_referral' | 'no_referral'>('no_filter');
   const [showDuplicateWarning, setShowDuplicateWarning] = useState(false);
   const [pendingCompany, setPendingCompany] = useState<{ company: string; role?: string; date: string; jobUrl?: string; referralStatus?: ReferralStatus } | null>(null);
 
   const filteredCompanies = companies.filter(c => {
     const query = searchQuery.toLowerCase();
-    return (
+    const matchesSearch = (
       c.company?.toLowerCase().includes(query) ||
       c.role?.toLowerCase().includes(query)
     );
+    const matchesReferral =
+      referralFilter === 'no_filter' ||
+      (referralFilter === 'all_referral' && !!c.referralStatus) ||
+      (referralFilter === 'no_referral' && !c.referralStatus) ||
+      c.referralStatus === referralFilter;
+    return matchesSearch && matchesReferral;
   });
 
   const activeCompanies = filteredCompanies.filter((c) => !c.targeted);
@@ -163,7 +171,7 @@ export default function TargetCompanies({
     setNewRole('');
     setNewJobUrl('');
     setNewReferralStatus('');
-    setNewDate(new Date().toISOString().split('T')[0]);
+    setNewDate(format(new Date(), 'yyyy-MM-dd'));
     setShowAddForm(false);
   };
 
@@ -239,23 +247,37 @@ export default function TargetCompanies({
                 </p>
               </div>
             </div>
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search companies..."
-                className="w-64 pl-10 pr-10 py-2 bg-background/50 rounded-lg border border-border/60 focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none transition-all text-sm"
-              />
-              {searchQuery && (
-                <button
-                  onClick={() => setSearchQuery('')}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              )}
+            <div className="flex items-center gap-2">
+              <select
+                value={referralFilter}
+                onChange={(e) => setReferralFilter(e.target.value as ReferralStatus | 'no_filter' | 'all_referral' | 'no_referral')}
+                className="pl-3 pr-10 py-2 bg-background/50 rounded-lg border border-border/60 focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none transition-all text-sm cursor-pointer"
+              >
+                <option value="no_filter">No Filter</option>
+                <option value="all_referral">All Referral</option>
+                <option value="no_referral">Except Referral</option>
+                <option value="asked">Asked</option>
+                <option value="awaiting">Awaiting</option>
+                <option value="done">Done</option>
+              </select>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search companies..."
+                  className="w-48 sm:w-64 pl-10 pr-10 py-2 bg-background/50 rounded-lg border border-border/60 focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none transition-all text-sm"
+                />
+                {searchQuery && (
+                  <button
+                    onClick={() => setSearchQuery('')}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -791,7 +813,7 @@ export default function TargetCompanies({
                   setNewRole('');
                   setNewJobUrl('');
                   setNewReferralStatus('');
-                  setNewDate(new Date().toISOString().split('T')[0]);
+                  setNewDate(format(new Date(), 'yyyy-MM-dd'));
                   setShowAddForm(false);
                 }}
                 className="flex-1 px-4 py-2.5 bg-gradient-to-r from-primary to-accent text-white rounded-xl hover:shadow-lg transition-all"

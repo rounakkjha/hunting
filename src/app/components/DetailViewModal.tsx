@@ -162,17 +162,38 @@ export default function DetailViewModal({
               </div>
             )}
             {isEditing ? (
-              <div className="flex items-center gap-3 p-4 bg-indigo-500/5 rounded-lg border border-indigo-500/20">
-                <input
-                  type="checkbox"
-                  id="alumni-edit"
-                  checked={(formData as JobApplication).isGreatLakesAlumni || false}
-                  onChange={(e) => setFormData({ ...formData, isGreatLakesAlumni: e.target.checked })}
-                  className="w-4 h-4 rounded border-border/60 text-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/50 cursor-pointer"
-                />
-                <label htmlFor="alumni-edit" className="text-sm text-foreground/90 cursor-pointer flex-1">
-                  Great Lakes Alumni
-                </label>
+              <>
+                <div className="flex items-center gap-3 p-4 bg-red-500/5 rounded-lg border border-red-500/20">
+                  <input
+                    type="checkbox"
+                    id="rejected-edit"
+                    checked={(formData as JobApplication).isRejected || false}
+                    onChange={(e) => setFormData({ ...formData, isRejected: e.target.checked })}
+                    className="w-4 h-4 rounded border-border/60 text-red-500 focus:ring-2 focus:ring-red-500/50 cursor-pointer"
+                  />
+                  <label htmlFor="rejected-edit" className="text-sm text-foreground/90 cursor-pointer flex-1">
+                    Rejected
+                  </label>
+                </div>
+                <div className="flex items-center gap-3 p-4 bg-indigo-500/5 rounded-lg border border-indigo-500/20">
+                  <input
+                    type="checkbox"
+                    id="alumni-edit"
+                    checked={(formData as JobApplication).isGreatLakesAlumni || false}
+                    onChange={(e) => setFormData({ ...formData, isGreatLakesAlumni: e.target.checked })}
+                    className="w-4 h-4 rounded border-border/60 text-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/50 cursor-pointer"
+                  />
+                  <label htmlFor="alumni-edit" className="text-sm text-foreground/90 cursor-pointer flex-1">
+                    Great Lakes Alumni
+                  </label>
+                </div>
+              </>
+            ) : app.isRejected ? (
+              <div className="space-y-1">
+                <p className="text-xs text-muted-foreground">Status</p>
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20 rounded text-xs font-medium">
+                  Rejected
+                </span>
               </div>
             ) : app.isGreatLakesAlumni ? (
               <div className="space-y-1">

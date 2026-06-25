@@ -1,4 +1,4 @@
-import { FileText, Mail, MessageSquare, CheckSquare, Briefcase, LucideIcon } from 'lucide-react';
+import { FileText, Mail, MessageSquare, Briefcase, LucideIcon, Reply } from 'lucide-react';
 import type { UserData } from '../App';
 
 interface StatsOverviewProps {
@@ -9,7 +9,7 @@ interface StatsOverviewProps {
 
 interface Stat {
   label: string;
-  value: number;
+  value: number | string;
   icon: LucideIcon;
   color: string;
   textColor: string;
@@ -22,6 +22,25 @@ export default function StatsOverview({ userData, onNavigate, isLoading }: Stats
   const initialEmails = userData.coldEmails.filter((e) => !e.isFollowUp).length;
   const followUpEmails = userData.coldEmails.filter((e) => e.isFollowUp).length;
   const followUpsDone = userData.coldEmails.filter((e) => e.followUpDone).length;
+
+  const totalApplied = userData.applications.length;
+
+  // Application IDs linked to an interview (new) OR company name match (legacy)
+  const interviewLinkedAppIds = new Set(
+    (userData.interviews || []).map((i) => i.sources?.applicationId).filter(Boolean)
+  );
+  const interviewCompanyNames = new Set(
+    (userData.interviews || []).map((i) => i.company.toLowerCase())
+  );
+
+  const totalReverts = userData.applications.filter((a) => {
+    if (a.isRejected || a.isActive || interviewLinkedAppIds.has(a.id)) return true;
+    const appCompany = a.company.toLowerCase();
+    return [...interviewCompanyNames].some(
+      (ic) => appCompany.includes(ic) || ic.includes(appCompany)
+    );
+  }).length;
+  const revertRate = totalApplied > 0 ? ((totalReverts / totalApplied) * 100).toFixed(1) : '0.0';
 
   // Skeleton card component
   const SkeletonCard = () => (
@@ -69,19 +88,20 @@ export default function StatsOverview({ userData, onNavigate, isLoading }: Stats
       label: 'Interviews',
       value: userData.interviews?.length || 0,
       icon: Briefcase,
-      color: 'from-purple-500 to-purple-600',
-      textColor: 'text-purple-500',
-      gradient: 'from-purple-500/10 to-purple-600/5',
-      subtitle: `${userData.interviews?.filter(i => i.status === 'active').length || 0} active`,
+      color: 'from-indigo-600 to-primary',
+      textColor: 'text-primary',
+      gradient: 'from-primary/10 to-indigo-600/5',
+      subtitle: `${userData.interviews?.filter(i => i.status === 'active').length || 0} active, ${userData.interviews?.filter(i => i.status === 'rejected').length || 0} rejected`,
       section: 'interviews',
     },
     {
-      label: 'Todos Active',
-      value: userData.todos.filter((t) => !t.completed).length,
-      icon: CheckSquare,
-      color: 'from-indigo-500 to-indigo-600',
-      textColor: 'text-indigo-500',
-      gradient: 'from-indigo-500/10 to-indigo-600/5',
+      label: 'Revert Rate',
+      value: `${revertRate}%`,
+      icon: Reply,
+      color: 'from-accent to-accent-light',
+      textColor: 'text-accent',
+      subtitle: `${totalReverts} of ${totalApplied} got a revert`,
+      gradient: 'from-accent/10 to-accent-light/5',
     },
   ];
 
@@ -111,8 +131,8 @@ export default function StatsOverview({ userData, onNavigate, isLoading }: Stats
           style={{ animationDelay: `${index * 80}ms` }}
           onClick={() => stat.section && onNavigate?.(stat.section)}
         >
-          <div className={`relative bg-card border border-border/50 rounded-2xl shadow-sm hover:shadow-lg hover:shadow-primary/5 hover:-translate-y-1 transition-all duration-300 ${stat.section ? 'cursor-pointer' : ''}`}>
-            <div className="relative p-3.5 sm:p-5">
+          <div className={`relative bg-card border border-border/50 rounded-2xl shadow-sm hover:shadow-lg hover:shadow-primary/5 hover:-translate-y-1 transition-all duration-300 h-full flex flex-col ${stat.section ? 'cursor-pointer' : ''}`}>
+            <div className="relative p-3.5 sm:p-5 flex-1 flex flex-col">
               <div className="flex items-center gap-2 sm:gap-3 mb-2 sm:mb-3">
                 <div className={`p-1.5 sm:p-2 rounded-lg bg-gradient-to-br ${stat.color} shadow-sm`}>
                   <stat.icon className="w-3.5 sm:w-4 h-3.5 sm:h-4 text-white" strokeWidth={2.5} />

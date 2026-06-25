@@ -1,6 +1,6 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { format } from 'date-fns';
-import { FileText, Trash2, Briefcase, ChevronRight, Mail, MailCheck, Tag, Users, Download, ExternalLink, Hash, Search, X, Filter, Pencil } from 'lucide-react';
+import { FileText, Trash2, Briefcase, ChevronRight, Mail, MailCheck, Tag, Users, Download, ExternalLink, Hash, Search, X, Filter, Pencil, XCircle, Zap } from 'lucide-react';
 import type { JobApplication } from '../App';
 
 function SourceBadge({ source }: { source: string }) {
@@ -45,17 +45,28 @@ interface ApplicationsListProps {
   onDelete: (id: string) => void;
   onViewDetails: (app: JobApplication) => void;
   onUpdateTag?: (id: string, tag: string) => void;
+  onUpdateStatus?: (id: string, isActive: boolean, isRejected: boolean) => void;
   onEdit?: (app: JobApplication) => void;
+  highlightedId?: string | null;
 }
 
 const PAGE_SIZE = 10;
 
 const TAG_CYCLE = ['', 'need_to_mail', 'already_mailed', 'ghost'];
 
-export default function ApplicationsList({ applications, onDelete, onViewDetails, onUpdateTag, onEdit }: ApplicationsListProps) {
+export default function ApplicationsList({ applications, onDelete, onViewDetails, onUpdateTag, onUpdateStatus, onEdit, highlightedId }: ApplicationsListProps) {
   const [showAll, setShowAll] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const highlightRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (highlightedId && highlightRef.current) {
+      setShowAll(true);
+      setTimeout(() => highlightRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 100);
+    }
+  }, [highlightedId]);
   const [sourceFilter, setSourceFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'applied' | 'active' | 'rejected'>('all');
   
   // Get unique sources (case-insensitive) - memoized for performance
   const uniqueSources = useMemo(() =>
@@ -79,9 +90,14 @@ export default function ApplicationsList({ applications, onDelete, onViewDetails
         app.source?.toLowerCase().includes(query)
       );
       const matchesSource = sourceFilter === 'all' || app.source?.toLowerCase() === sourceFilter;
-      return matchesSearch && matchesSource;
+      const matchesStatus =
+        statusFilter === 'all' ||
+        (statusFilter === 'rejected' && app.isRejected) ||
+        (statusFilter === 'active' && app.isActive && !app.isRejected) ||
+        (statusFilter === 'applied' && !app.isActive && !app.isRejected);
+      return matchesSearch && matchesSource && matchesStatus;
     });
-  }, [applications, searchQuery, sourceFilter]);
+  }, [applications, searchQuery, sourceFilter, statusFilter]);
   
   const displayApplications = showAll ? filteredApplications : filteredApplications.slice(0, PAGE_SIZE);
 
@@ -116,6 +132,16 @@ export default function ApplicationsList({ applications, onDelete, onViewDetails
                   ))}
                 </select>
               </div>
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value as 'all' | 'applied' | 'active' | 'rejected')}
+                className="w-full sm:w-36 pl-3 pr-10 py-2 bg-background/50 rounded-lg border border-border/60 focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none transition-all text-sm cursor-pointer"
+              >
+                <option value="all">All Status</option>
+                <option value="applied">Applied</option>
+                <option value="active">Active</option>
+                <option value="rejected">Rejected</option>
+              </select>
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
                 <input
@@ -154,11 +180,27 @@ export default function ApplicationsList({ applications, onDelete, onViewDetails
               {displayApplications.map((app, index) => (
                 <div
                   key={app.id}
-                  className="group/item relative bg-background/50 backdrop-blur-sm rounded-2xl border border-border/60 hover:border-primary/50 transition-all duration-300 cursor-pointer hover:shadow-lg hover:shadow-primary/5 hover:-translate-y-0.5 overflow-hidden"
+                  ref={app.id === highlightedId ? highlightRef : null}
+                  className={`group/item relative backdrop-blur-sm rounded-2xl border transition-all duration-300 cursor-pointer hover:shadow-lg hover:shadow-primary/5 hover:-translate-y-0.5 overflow-hidden ${
+                    app.id === highlightedId
+                      ? 'bg-primary/10 border-primary/60 shadow-lg shadow-primary/10'
+                      : 'bg-background/50 border-border/60 hover:border-primary/50'
+                  }`}
                   onClick={() => onViewDetails(app)}
                   style={{ animationDelay: `${index * 30}ms` }}
                 >
                   <div className="absolute inset-0 bg-gradient-to-r from-primary/5 to-transparent opacity-0 group-hover/item:opacity-100 transition-opacity duration-300" />
+                  {/* Status ribbon */}
+                  {app.isRejected && (
+                    <div className="absolute top-0 left-0 flex items-center gap-1 px-3 py-1 text-[10px] font-bold uppercase tracking-wide rounded-br-xl rounded-tl-2xl z-10 bg-red-500/15 text-red-600 dark:text-red-400 border-b border-r border-red-500/30">
+                      <XCircle className="w-3 h-3" strokeWidth={2.5} /> Rejected
+                    </div>
+                  )}
+                  {!app.isRejected && app.isActive && (
+                    <div className="absolute top-0 left-0 flex items-center gap-1 px-3 py-1 text-[10px] font-bold uppercase tracking-wide rounded-br-xl rounded-tl-2xl z-10 bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-b border-r border-emerald-500/30">
+                      <Zap className="w-3 h-3" strokeWidth={2.5} /> Active
+                    </div>
+                  )}
                   {/* Ribbon tag - always visible */}
                   {app.emailTag && app.emailTag !== '' && (
                     <div
@@ -258,6 +300,41 @@ export default function ApplicationsList({ applications, onDelete, onViewDetails
                           </button>
                           <span className="pointer-events-none absolute top-full right-0 mt-2 px-2.5 py-1 rounded-lg text-[11px] font-medium whitespace-nowrap hidden group-hover/tag:block bg-foreground text-background shadow-lg z-[100]">
                             Click to cycle email tag
+                          </span>
+                        </div>
+                        <div className="relative group/status">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (!app.isActive && !app.isRejected) {
+                                onUpdateStatus?.(app.id, true, false);
+                              } else if (app.isActive && !app.isRejected) {
+                                onUpdateStatus?.(app.id, false, true);
+                              } else {
+                                onUpdateStatus?.(app.id, false, false);
+                              }
+                            }}
+                            className={`sm:opacity-0 sm:group-hover/item:opacity-100 p-1.5 sm:p-2.5 rounded-lg sm:rounded-xl border border-transparent transition-all ${
+                              app.isRejected
+                                ? 'text-red-500 bg-red-500/10 border-red-500/20 sm:opacity-100'
+                                : app.isActive
+                                ? 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20 sm:opacity-100'
+                                : 'text-muted-foreground hover:bg-emerald-500/10 hover:text-emerald-500 hover:border-emerald-500/20'
+                            }`}
+                            title={
+                              app.isRejected ? 'Rejected — click to reset to Applied'
+                              : app.isActive ? 'Active — click to mark Rejected'
+                              : 'Applied — click to mark Active'
+                            }
+                          >
+                            {app.isRejected
+                              ? <XCircle className="w-3.5 sm:w-4 h-3.5 sm:h-4" strokeWidth={2.5} />
+                              : app.isActive
+                              ? <Zap className="w-3.5 sm:w-4 h-3.5 sm:h-4" strokeWidth={2.5} />
+                              : <Zap className="w-3.5 sm:w-4 h-3.5 sm:h-4" strokeWidth={2.5} />}
+                          </button>
+                          <span className="pointer-events-none absolute top-full right-0 mt-2 px-2.5 py-1 rounded-lg text-[11px] font-medium whitespace-nowrap hidden group-hover/status:block bg-foreground text-background shadow-lg z-[100]">
+                            {app.isRejected ? 'Reset to Applied' : app.isActive ? 'Mark as Rejected' : 'Mark as Active'}
                           </span>
                         </div>
                         {onEdit && (

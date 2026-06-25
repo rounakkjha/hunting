@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { format } from 'date-fns';
+import useNow from '../hooks/useNow';
 import {
   Plus,
   Minus,
@@ -45,7 +46,6 @@ import TrashBin from './TrashBin';
 import { useToast } from './Toast';
 import StrategyBoard from './StrategyBoard';
 import UserManagement from './UserManagement';
-import ResumeMatcher from './ResumeMatcher';
 
 interface DashboardProps {
   userData: UserData;
@@ -165,11 +165,18 @@ export default function Dashboard({ userData, setUserData, onLogout, currentUser
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<{ action: () => void; label: string } | null>(null);
+  const [pendingInterview, setPendingInterview] = useState<{ data: any; matchedApp: JobApplication } | null>(null);
   const [showChangePassword, setShowChangePassword] = useState(false);
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [passwordError, setPasswordError] = useState('');
+  const [highlightedEntry, setHighlightedEntry] = useState<{ section: string; id: string } | null>(null);
   const { showToast } = useToast();
+
+  const handleSearchHighlight = (section: string, id: string) => {
+    setHighlightedEntry({ section, id });
+    setTimeout(() => setHighlightedEntry(null), 3000);
+  };
 
   const softDelete = (type: TrashItemType, id: string, label: string) => {
     setConfirmDelete({
@@ -255,7 +262,8 @@ export default function Dashboard({ userData, setUserData, onLogout, currentUser
   };
 
   // Carry forward overdue incomplete todos to today
-  const today = format(new Date(), 'yyyy-MM-dd');
+  const now = useNow();
+  const today = format(now, 'yyyy-MM-dd');
   const todosWithCarryForward = useMemo(() => {
     return userData.todos.map((t) => {
       if (!t.completed && t.date < today) {
@@ -274,6 +282,8 @@ export default function Dashboard({ userData, setUserData, onLogout, currentUser
       applications: userData.applications.filter((a) => a.date >= start && a.date <= end),
       coldEmails: userData.coldEmails.filter((e) => e.date >= start && e.date <= end),
       linkedInOutreach: userData.linkedInOutreach.filter((l) => l.date >= start && l.date <= end),
+      interviews: (userData.interviews || []).filter((i) => { const d = i.createdAt?.slice(0, 10) || ''; return d >= start && d <= end; }),
+      targetCompanies: userData.targetCompanies.filter((t) => t.date >= start && t.date <= end),
       contentLibrary: userData.contentLibrary,
       todos: todosWithCarryForward.filter((t: any) => t.date >= start && t.date <= end),
     };
@@ -360,11 +370,9 @@ export default function Dashboard({ userData, setUserData, onLogout, currentUser
               <GlobalSearch
                 userData={userData}
                 onNavigate={setActiveSection}
-                onViewApplication={(app) => setDetailView({ type: 'application', entry: app })}
-                onViewColdEmail={(email) => setDetailView({ type: 'coldEmail', entry: email })}
-                onViewLinkedIn={(outreach) => setDetailView({ type: 'linkedin', entry: outreach })}
+                onHighlight={handleSearchHighlight}
               />
-              <StatsOverview userData={filteredData} onNavigate={setActiveSection} isLoading={isLoading} />
+              <StatsOverview userData={userData} onNavigate={setActiveSection} isLoading={isLoading} />
               <AdvancedStats userData={filteredData} isLoading={isLoading} />
             </div>
 
@@ -467,7 +475,7 @@ export default function Dashboard({ userData, setUserData, onLogout, currentUser
                     ))}
                   </div>
 
-                  <StatsOverview userData={filteredData} onNavigate={setActiveSection} isLoading={isLoading} />
+                  <StatsOverview userData={userData} onNavigate={setActiveSection} isLoading={isLoading} />
 
                   <button
                     onClick={() => setActiveSection('analytics')}
@@ -596,10 +604,19 @@ export default function Dashboard({ userData, setUserData, onLogout, currentUser
                   return updated;
                 });
               }}
+              onUpdateStatus={(id, isActive, isRejected) => {
+                setUserData((prev) => ({
+                  ...prev,
+                  applications: prev.applications.map((a) =>
+                    a.id === id ? { ...a, isActive, isRejected } : a
+                  ),
+                }));
+              }}
               onEdit={(app) => {
                 setEditingEntry(app);
                 setActiveModal('application');
               }}
+              highlightedId={highlightedEntry?.section === 'applications' ? highlightedEntry.id : null}
             />
             {/* Companies needing mail that aren't in target companies */}
             {(() => {
@@ -711,6 +728,7 @@ export default function Dashboard({ userData, setUserData, onLogout, currentUser
                 setEditingEntry(email);
                 setActiveModal('coldEmail');
               }}
+              highlightedId={highlightedEntry?.section === 'emails' ? highlightedEntry.id : null}
             />
           </div>
         );
@@ -773,17 +791,54 @@ export default function Dashboard({ userData, setUserData, onLogout, currentUser
                 setActiveModal('interview');
               }}
               onAdd={(data) => {
+                // Use the earliest round date as createdAt so the chart reflects
+                // when the interview actually started, not when the entry was logged
+                const roundDates = (data.rounds || [])
+                  .map((r: any) => r.date)
+                  .filter(Boolean)
+                  .sort();
+                const createdAt = roundDates[0] || format(new Date(), 'yyyy-MM-dd');
                 const newInterview = {
                   ...data,
                   id: Date.now().toString(),
-                  createdAt: format(new Date(), 'yyyy-MM-dd'),
+                  createdAt,
                   updatedAt: format(new Date(), 'yyyy-MM-dd'),
                 };
-                setUserData((prev) => ({
-                  ...prev,
-                  interviews: [newInterview, ...prev.interviews],
-                }));
-                showToast(randomPick(quirkyToasts.addApplication));
+                const matchedApp = userData.applications.find(
+                  (a) => a.company.toLowerCase() === data.company.toLowerCase()
+                );
+                if (matchedApp && !matchedApp.isActive && !matchedApp.isRejected) {
+                  setPendingInterview({ data: newInterview, matchedApp });
+                } else if (!matchedApp) {
+                  // No matching application — auto-create one and link it
+                  const newAppId = (Date.now() + 1).toString();
+                  const autoApp = {
+                    id: newAppId,
+                    date: format(new Date(), 'yyyy-MM-dd'),
+                    company: data.company,
+                    role: data.role || '',
+                    source: 'Other',
+                    isActive: true,
+                    isRejected: false,
+                    customFields: {},
+                  };
+                  const linkedInterview = {
+                    ...newInterview,
+                    sources: { ...newInterview.sources, applicationId: newAppId },
+                  };
+                  setUserData((prev) => ({
+                    ...prev,
+                    applications: [autoApp, ...prev.applications],
+                    interviews: [linkedInterview, ...prev.interviews],
+                  }));
+                  showToast('✅ Interview added & application auto-created');
+                } else {
+                  setUserData((prev) => ({
+                    ...prev,
+                    interviews: [newInterview, ...prev.interviews],
+                  }));
+                  showToast(randomPick(quirkyToasts.addApplication));
+                }
               }}
               onDelete={(id) => {
                 const interview = userData.interviews.find((i) => i.id === id);
@@ -1148,19 +1203,32 @@ export default function Dashboard({ userData, setUserData, onLogout, currentUser
           </div>
         );
 
+      case 'matcher':
+        return (
+          <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-6">
+            <div className="relative mb-6">
+              <div className="absolute -inset-4 bg-gradient-to-r from-primary/20 to-accent/20 rounded-3xl blur-xl opacity-60" />
+              <div className="relative w-20 h-20 rounded-3xl bg-gradient-to-br from-primary/10 to-accent/10 border border-primary/20 flex items-center justify-center">
+                <svg xmlns="http://www.w3.org/2000/svg" className="w-10 h-10 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+              </div>
+            </div>
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 mb-4 rounded-full text-xs font-semibold bg-primary/10 text-primary border border-primary/20">
+              <svg xmlns="http://www.w3.org/2000/svg" className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              Coming Soon
+            </span>
+            <h2 className="text-3xl font-bold mb-3">Resume Matcher</h2>
+            <p className="text-muted-foreground max-w-md text-sm leading-relaxed">
+              Match your resume against job descriptions with AI-powered scoring. Get keyword analysis, gap identification, and tailored improvement suggestions — coming very soon.
+            </p>
+          </div>
+        );
+
       case 'analytics':
         return (
           <div className="space-y-6">
             <h2 className="text-3xl font-bold">Analytics</h2>
             <DateFilter dateRange={dateRange} onDateRangeChange={setDateRange} />
             <AdvancedStats userData={filteredData} />
-          </div>
-        );
-
-      case 'matcher':
-        return (
-          <div className="space-y-6">
-            <ResumeMatcher userData={userData} setUserData={setUserData} />
           </div>
         );
 
@@ -1294,7 +1362,15 @@ export default function Dashboard({ userData, setUserData, onLogout, currentUser
                   ...prev,
                   [collectionKey]: (prev as any)[collectionKey].map((e: any) =>
                     e.id === editingEntry.id
-                      ? { ...processedData, id: editingEntry.id, createdAt: editingEntry.createdAt, customFields: customFields || {}, updatedAt: format(new Date(), 'yyyy-MM-dd') }
+                      ? (() => {
+                          // Recalculate createdAt from earliest round date on edit
+                          const roundDates = (processedData.rounds || [])
+                            .map((r: any) => r.date)
+                            .filter(Boolean)
+                            .sort();
+                          const createdAt = roundDates[0] || editingEntry.createdAt || format(new Date(), 'yyyy-MM-dd');
+                          return { ...processedData, id: editingEntry.id, createdAt, customFields: customFields || {}, updatedAt: format(new Date(), 'yyyy-MM-dd') };
+                        })()
                       : e
                   ),
                 }));
@@ -1371,6 +1447,49 @@ export default function Dashboard({ userData, setUserData, onLogout, currentUser
         onConfirm={() => confirmDelete?.action()}
         onCancel={() => setConfirmDelete(null)}
       />
+
+      {/* Pending interview: mark application active prompt */}
+      {pendingInterview && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-6 z-50">
+          <div className="bg-card border border-border/60 rounded-2xl shadow-2xl w-full max-w-md p-6 space-y-4">
+            <h3 className="text-base font-semibold">Mark application as Active?</h3>
+            <p className="text-sm text-muted-foreground">
+              A matching job application was found for <span className="font-semibold text-foreground">{pendingInterview.matchedApp.company}</span>. Do you want to mark it as <span className="text-emerald-500 font-semibold">Active</span> since an interview process is happening?
+            </p>
+            <div className="flex gap-3 pt-2">
+              <button
+                onClick={() => {
+                  setUserData((prev) => ({
+                    ...prev,
+                    interviews: [pendingInterview.data, ...prev.interviews],
+                    applications: prev.applications.map((a) =>
+                      a.id === pendingInterview.matchedApp.id ? { ...a, isActive: true, isRejected: false } : a
+                    ),
+                  }));
+                  showToast('✅ Interview added & application marked Active');
+                  setPendingInterview(null);
+                }}
+                className="flex-1 px-4 py-2 bg-emerald-500 text-white rounded-lg text-sm font-medium hover:bg-emerald-600 transition-all"
+              >
+                Yes, mark Active
+              </button>
+              <button
+                onClick={() => {
+                  setUserData((prev) => ({
+                    ...prev,
+                    interviews: [pendingInterview.data, ...prev.interviews],
+                  }));
+                  showToast(randomPick(quirkyToasts.addApplication));
+                  setPendingInterview(null);
+                }}
+                className="flex-1 px-4 py-2 bg-muted text-foreground rounded-lg text-sm font-medium hover:bg-muted/80 transition-all"
+              >
+                Skip
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Change Password Modal */}
       {showChangePassword && (

@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { format } from 'date-fns';
 import { X, Plus, Upload, FileText, Trash2, Calendar, Clock, CheckCircle, XCircle, AlertCircle, DollarSign } from 'lucide-react';
 import type { CustomField, InterviewRoundStatus, InterviewStatus, Interview } from '../App';
 import CompanyAutocomplete from './CompanyAutocomplete';
@@ -28,7 +29,7 @@ export default function QuickAddModal({ type, customFields = [], knownCompanies 
     if (editingEntry) {
       // Pre-fill form with existing entry data
       setFormData({
-        date: editingEntry.date || new Date().toISOString().split('T')[0],
+        date: editingEntry.date || format(new Date(), 'yyyy-MM-dd'),
         company: editingEntry.company || '',
         role: editingEntry.role || '',
         source: editingEntry.source || '',
@@ -57,7 +58,7 @@ export default function QuickAddModal({ type, customFields = [], knownCompanies 
       }
     } else {
       // Initialize with default values for new entry
-      const today = new Date().toISOString().split('T')[0];
+      const today = format(new Date(), 'yyyy-MM-dd');
       setFormData({ date: today });
       setCustomFieldsData({});
       if (type === 'interview') {

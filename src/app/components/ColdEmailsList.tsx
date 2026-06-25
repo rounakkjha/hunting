@@ -1,6 +1,6 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { format, addDays, isAfter, isBefore, isToday } from 'date-fns';
-import { Mail, Trash2, Reply, ChevronRight, Send, MailCheck, Download, AlertCircle, CheckCircle2, Search, X, Pencil } from 'lucide-react';
+import { Mail, Trash2, Reply, ChevronRight, ChevronDown, Send, MailCheck, Download, AlertCircle, CheckCircle2, Search, X, Pencil, Building2 } from 'lucide-react';
 import type { ColdEmail } from '../App';
 
 interface ColdEmailsListProps {
@@ -10,14 +10,30 @@ interface ColdEmailsListProps {
   onToggleResponse: (id: string) => void;
   onToggleFollowUpDone?: (id: string) => void;
   onEdit?: (email: ColdEmail) => void;
+  highlightedId?: string | null;
+  groupByCompany?: boolean;
 }
 
 const PAGE_SIZE = 10;
 
-export default function ColdEmailsList({ coldEmails, onDelete, onViewDetails, onToggleResponse, onToggleFollowUpDone, onEdit }: ColdEmailsListProps) {
+export default function ColdEmailsList({ coldEmails, onDelete, onViewDetails, onToggleResponse, onToggleFollowUpDone, onEdit, highlightedId, groupByCompany = true }: ColdEmailsListProps) {
   const [activeTab, setActiveTab] = useState<'all' | 'initial' | 'followup'>('all');
   const [showAll, setShowAll] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [expandedCompanies, setExpandedCompanies] = useState<Set<string>>(new Set());
+  const highlightRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (highlightedId) {
+      const email = coldEmails.find((e) => e.id === highlightedId);
+      if (email) {
+        const key = email.company?.toLowerCase() || '__unknown__';
+        setExpandedCompanies((prev) => new Set([...prev, key]));
+        setShowAll(true);
+        setTimeout(() => highlightRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 200);
+      }
+    }
+  }, [highlightedId, coldEmails]);
 
   // Memoized filtered emails for performance
   const filteredEmails = useMemo(() => {
@@ -62,12 +78,32 @@ export default function ColdEmailsList({ coldEmails, onDelete, onViewDetails, on
       case 'followup':
         return followUpEmails;
       default:
-        return coldEmails;
+        return filteredEmails;
     }
   };
 
   const allDisplayEmails = getDisplayEmails();
   const displayEmails = showAll ? allDisplayEmails : allDisplayEmails.slice(0, PAGE_SIZE);
+
+  // Group by company
+  const groupedByCompany = useMemo((): Record<string, ColdEmail[]> => {
+    const groups: Record<string, ColdEmail[]> = {};
+    allDisplayEmails.forEach((email) => {
+      const key = email.company?.toLowerCase() || '__unknown__';
+      if (!groups[key]) groups[key] = [];
+      groups[key].push(email);
+    });
+    return groups;
+  }, [allDisplayEmails]);
+
+  const toggleCompany = (company: string) => {
+    setExpandedCompanies((prev) => {
+      const next = new Set(prev);
+      if (next.has(company)) next.delete(company);
+      else next.add(company);
+      return next;
+    });
+  };
 
   return (
     <div className="relative group">
@@ -154,175 +190,130 @@ export default function ColdEmailsList({ coldEmails, onDelete, onViewDetails, on
               </h4>
             </div>
           ) : (
-            <div className="space-y-3">
-              {displayEmails.map((email, index) => (
-                <div
-                  key={email.id}
-                  className="group/item relative bg-background/50 backdrop-blur-sm rounded-2xl border border-border/60 hover:border-primary/50 transition-all duration-300 cursor-pointer hover:shadow-lg hover:shadow-primary/5 hover:-translate-y-0.5"
-                  onClick={() => onViewDetails(email)}
-                  style={{ animationDelay: `${index * 30}ms` }}
-                >
-                  <div className="absolute inset-0 bg-gradient-to-r from-primary/5 to-transparent opacity-0 group-hover/item:opacity-100 transition-opacity duration-300" />
-                  <div className="relative p-3.5 sm:p-5">
-                    <div className="flex items-start justify-between gap-3 sm:gap-4">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-1.5 sm:gap-2 mb-1.5 sm:mb-2 flex-wrap">
-                          <h4 className="font-semibold truncate text-sm sm:text-lg group-hover/item:text-primary transition-colors">
-                            {email.company}
-                          </h4>
-                          {email.isFollowUp && (
-                            <div className="relative group/tag">
-                              <span className="flex items-center gap-1.5 px-2.5 py-1 bg-amber-500/10 text-amber-400 border border-amber-500/20 rounded-lg text-xs font-semibold">
-                                <Reply className="w-3 h-3" />
-                                Follow-up
-                              </span>
-                              <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-card text-foreground text-xs font-medium rounded-lg border border-border/60 shadow-lg hidden group-hover/tag:block pointer-events-none whitespace-nowrap z-[100]">
-                                This is a follow-up email sent after the initial email
-                              </span>
-                            </div>
-                          )}
-                          {email.gotResponse && (
-                            <div className="relative group/tag">
-                              <span className="flex items-center gap-1.5 px-2.5 py-1 bg-green-500/10 text-green-500 border border-green-500/20 rounded-lg text-xs font-semibold">
-                                <MailCheck className="w-3 h-3" />
-                                Replied
-                              </span>
-                              <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-card text-foreground text-xs font-medium rounded-lg border border-border/60 shadow-lg hidden group-hover/tag:block pointer-events-none whitespace-nowrap z-[100]">
-                                The company has responded to this email
-                              </span>
-                            </div>
-                          )}
-                          {!email.isFollowUp && (() => {
-                            const status = getFollowUpStatus(email);
-                            const colorClasses = {
-                              green: 'bg-green-500/10 text-green-500 border-green-500/20',
-                              amber: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
-                              red: 'bg-red-500/10 text-red-500 border-red-500/20',
-                              blue: 'bg-blue-500/10 text-blue-500 border-blue-500/20',
-                            };
-                            const tooltipText = {
-                              done: 'Follow-up email has been sent',
-                              due: 'Follow-up email is due today',
-                              overdue: 'Follow-up email is overdue - send it now!',
-                              pending: 'Follow-up email is scheduled for a future date',
-                            };
-                            return (
-                              <div className="relative group/tag">
-                                <span className={`flex items-center gap-1.5 px-2.5 py-1 ${colorClasses[status.color as keyof typeof colorClasses]} border rounded-lg text-xs font-semibold`}>
-                                  {status.status === 'overdue' && <AlertCircle className="w-3 h-3" />}
-                                  {status.status === 'done' && <CheckCircle2 className="w-3 h-3" />}
-                                  {status.label}
-                                </span>
-                                <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-card text-foreground text-xs font-medium rounded-lg border border-border/60 shadow-lg hidden group-hover/tag:block pointer-events-none whitespace-nowrap z-[100]">
-                                  {tooltipText[status.status as keyof typeof tooltipText]}
-                                </span>
+            <div className="space-y-2.5">
+              {(Object.entries(groupedByCompany) as [string, ColdEmail[]][]).map(([companyKey, emails]) => {
+                const company = emails[0].company;
+                const isExpanded = expandedCompanies.has(companyKey);
+                const hasResponse = emails.some((e) => e.gotResponse);
+                const hasHighlight = emails.some((e) => e.id === highlightedId);
+                const initials = (company || '?').slice(0, 2).toUpperCase();
+                return (
+                  <div key={companyKey} className={`rounded-2xl border overflow-hidden transition-all duration-200 ${hasHighlight ? 'border-primary/60 shadow-lg shadow-primary/10' : 'border-border/50 hover:border-primary/30 hover:shadow-md hover:shadow-primary/5'}`}>
+                    {/* Company header */}
+                    <button
+                      type="button"
+                      className={`w-full flex items-center justify-between gap-3 px-4 py-3.5 transition-all text-left ${isExpanded ? 'bg-primary/5 border-b border-border/50' : 'bg-card hover:bg-primary/5'}`}
+                      onClick={() => toggleCompany(companyKey)}
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-primary/20 to-accent/10 border border-primary/20 flex items-center justify-center shrink-0">
+                          <span className="text-[10px] font-bold text-primary">{initials}</span>
+                        </div>
+                        <span className="font-semibold text-sm sm:text-base truncate text-foreground">{company}</span>
+                        <span className="shrink-0 text-[11px] text-muted-foreground font-medium px-2 py-0.5 bg-muted/60 rounded-full border border-border/40">
+                          {emails.length} email{emails.length !== 1 ? 's' : ''}
+                        </span>
+                        {hasResponse && (
+                          <span className="shrink-0 hidden sm:flex items-center gap-1 text-[11px] text-primary font-semibold px-2 py-0.5 bg-primary/10 border border-primary/20 rounded-full">
+                            <MailCheck className="w-3 h-3" /> Replied
+                          </span>
+                        )}
+                      </div>
+                      <div className={`p-1 rounded-lg transition-all ${isExpanded ? 'bg-primary/10 text-primary' : 'text-muted-foreground'}`}>
+                        {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                      </div>
+                    </button>
+                    {/* Individual entries */}
+                    {isExpanded && (
+                      <div className="divide-y divide-border/30 bg-background/40">
+                        {emails.map((email) => (
+                          <div
+                            key={email.id}
+                            ref={email.id === highlightedId ? highlightRef : null}
+                            className={`group/item relative cursor-pointer transition-all ${email.id === highlightedId ? 'bg-primary/10' : 'hover:bg-primary/5'}`}
+                            onClick={() => onViewDetails(email)}
+                          >
+                            <div className="px-4 py-3 sm:px-5 sm:py-3.5">
+                              <div className="flex items-center justify-between gap-3">
+                                <div className="flex-1 min-w-0">
+                                  {/* Badges row */}
+                                  <div className="flex items-center gap-1.5 flex-wrap mb-1.5">
+                                    {email.isFollowUp ? (
+                                      <span className="flex items-center gap-1 px-2 py-0.5 bg-accent/10 text-accent border border-accent/20 rounded-md text-[11px] font-semibold">
+                                        <Reply className="w-3 h-3" /> Follow-up
+                                      </span>
+                                    ) : (
+                                      <span className="flex items-center gap-1 px-2 py-0.5 bg-primary/10 text-primary border border-primary/20 rounded-md text-[11px] font-semibold">
+                                        <Send className="w-3 h-3" /> Initial
+                                      </span>
+                                    )}
+                                    {email.gotResponse && (
+                                      <span className="flex items-center gap-1 px-2 py-0.5 bg-green-500/10 text-green-500 border border-green-500/20 rounded-md text-[11px] font-semibold">
+                                        <MailCheck className="w-3 h-3" /> Replied
+                                      </span>
+                                    )}
+                                    {!email.isFollowUp && (() => {
+                                      const status = getFollowUpStatus(email);
+                                      const colorClasses = {
+                                        green: 'bg-green-500/10 text-green-500 border-green-500/20',
+                                        amber: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
+                                        red: 'bg-red-500/10 text-red-400 border-red-500/20',
+                                        blue: 'bg-primary/10 text-primary border-primary/20',
+                                      };
+                                      return (
+                                        <span className={`flex items-center gap-1 px-2 py-0.5 ${colorClasses[status.color as keyof typeof colorClasses]} border rounded-md text-[11px] font-semibold`}>
+                                          {status.status === 'overdue' && <AlertCircle className="w-3 h-3" />}
+                                          {status.status === 'done' && <CheckCircle2 className="w-3 h-3" />}
+                                          {status.label}
+                                        </span>
+                                      );
+                                    })()}
+                                  </div>
+                                  {/* Meta row */}
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    {email.role && <span className="text-xs font-medium text-foreground/80">{email.role}</span>}
+                                    {email.email && (
+                                      <span className="text-[11px] text-muted-foreground px-2 py-0.5 bg-muted/50 rounded-md border border-border/40 truncate max-w-[180px]">
+                                        {email.email}
+                                      </span>
+                                    )}
+                                    <span className="text-[11px] text-muted-foreground">{format(new Date(email.date), 'MMM dd, yyyy')}</span>
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-1 shrink-0">
+                                  {!email.isFollowUp && onToggleFollowUpDone && (
+                                    <button onClick={(e) => { e.stopPropagation(); onToggleFollowUpDone(email.id); }}
+                                      className={`sm:opacity-0 sm:group-hover/item:opacity-100 p-1.5 rounded-lg border transition-all ${email.followUpDone ? 'text-green-500 bg-green-500/10 border-green-500/20' : 'text-muted-foreground hover:text-green-500 hover:bg-green-500/10 border-transparent hover:border-green-500/20'}`}
+                                      title={email.followUpDone ? 'Mark follow-up as not done' : 'Mark follow-up as done'}>
+                                      <CheckCircle2 className="w-3.5 h-3.5" strokeWidth={2.5} />
+                                    </button>
+                                  )}
+                                  <button onClick={(e) => { e.stopPropagation(); onToggleResponse(email.id); }}
+                                    className={`sm:opacity-0 sm:group-hover/item:opacity-100 p-1.5 rounded-lg border transition-all ${email.gotResponse ? 'text-green-500 bg-green-500/10 border-green-500/20' : 'text-muted-foreground hover:text-green-500 hover:bg-green-500/10 border-transparent hover:border-green-500/20'}`}
+                                    title={email.gotResponse ? 'Mark as no response' : 'Mark as got response'}>
+                                    <MailCheck className="w-3.5 h-3.5" strokeWidth={2.5} />
+                                  </button>
+                                  {onEdit && (
+                                    <button onClick={(e) => { e.stopPropagation(); onEdit(email); }}
+                                      className="sm:opacity-0 sm:group-hover/item:opacity-100 p-1.5 text-primary/70 hover:text-primary hover:bg-primary/10 rounded-lg border border-transparent hover:border-primary/20 transition-all" title="Edit">
+                                      <Pencil className="w-3.5 h-3.5" strokeWidth={2.5} />
+                                    </button>
+                                  )}
+                                  <button onClick={(e) => { e.stopPropagation(); onDelete(email.id); }}
+                                    className="sm:opacity-0 sm:group-hover/item:opacity-100 p-1.5 text-red-400 hover:bg-red-500/10 rounded-lg border border-transparent hover:border-red-500/20 transition-all" title="Delete">
+                                    <Trash2 className="w-3.5 h-3.5" strokeWidth={2.5} />
+                                  </button>
+                                  <ChevronRight className="w-4 h-4 text-muted-foreground/40 group-hover/item:text-primary transition-all" />
+                                </div>
                               </div>
-                            );
-                          })()}
-                        </div>
-                        <div className="space-y-2">
-                          {email.role && <p className="text-sm text-foreground/70 font-medium">{email.role}</p>}
-                          <div className="flex items-center gap-2 flex-wrap text-xs">
-                            {email.email && (
-                              <span className="px-3 py-1.5 bg-muted/80 backdrop-blur-sm rounded-lg font-medium border border-border/50 truncate max-w-[200px]">
-                                {email.email}
-                              </span>
-                            )}
-                            <span className="text-muted-foreground font-medium">
-                              {format(new Date(email.date), 'MMM dd, yyyy')}
-                            </span>
-                            {email.resumeName && (
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  if (email.resumeData) {
-                                    const a = document.createElement('a');
-                                    a.href = email.resumeData;
-                                    a.download = email.resumeName || 'resume';
-                                    a.click();
-                                  }
-                                }}
-                                className="inline-flex items-center gap-1 px-2 py-1 bg-primary/10 text-primary rounded-lg border border-primary/20 hover:bg-primary/20 transition-all"
-                                title="Download resume"
-                              >
-                                <Download className="w-3 h-3" strokeWidth={2.5} />
-                                <span className="text-[10px] font-semibold">Resume</span>
-                              </button>
-                            )}
+                            </div>
                           </div>
-                        </div>
+                        ))}
                       </div>
-                      <div className="flex items-center gap-1 sm:gap-2">
-                        {!email.isFollowUp && onToggleFollowUpDone && (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onToggleFollowUpDone(email.id);
-                            }}
-                            className={`sm:opacity-0 sm:group-hover/item:opacity-100 p-1.5 sm:p-2.5 rounded-lg sm:rounded-xl border transition-all ${
-                              email.followUpDone
-                                ? 'text-green-500 bg-green-500/10 border-green-500/20 hover:bg-green-500/20'
-                                : 'text-muted-foreground hover:text-green-500 hover:bg-green-500/10 border-transparent hover:border-green-500/20'
-                            }`}
-                            title={email.followUpDone ? 'Mark follow-up as not done' : 'Mark follow-up as done'}
-                          >
-                            <CheckCircle2 className="w-3.5 sm:w-4 h-3.5 sm:h-4" strokeWidth={2.5} />
-                          </button>
-                        )}
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onToggleResponse(email.id);
-                          }}
-                          className={`sm:opacity-0 sm:group-hover/item:opacity-100 p-1.5 sm:p-2.5 rounded-lg sm:rounded-xl border transition-all ${
-                            email.gotResponse
-                              ? 'text-green-500 bg-green-500/10 border-green-500/20 hover:bg-green-500/20'
-                              : 'text-muted-foreground hover:text-green-500 hover:bg-green-500/10 border-transparent hover:border-green-500/20'
-                          }`}
-                          title={email.gotResponse ? 'Mark as no response' : 'Mark as got response'}
-                        >
-                          <MailCheck className="w-3.5 sm:w-4 h-3.5 sm:h-4" strokeWidth={2.5} />
-                        </button>
-                        {onEdit && (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onEdit(email);
-                            }}
-                            className="sm:opacity-0 sm:group-hover/item:opacity-100 p-1.5 sm:p-2.5 text-blue-400 hover:bg-blue-500/10 rounded-lg sm:rounded-xl border border-transparent hover:border-blue-500/20 transition-all"
-                            title="Edit"
-                          >
-                            <Pencil className="w-3.5 sm:w-4 h-3.5 sm:h-4" strokeWidth={2.5} />
-                          </button>
-                        )}
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onDelete(email.id);
-                          }}
-                          className="sm:opacity-0 sm:group-hover/item:opacity-100 p-1.5 sm:p-2.5 text-red-400 hover:bg-red-500/10 rounded-lg sm:rounded-xl border border-transparent hover:border-red-500/20 transition-all"
-                          title="Delete"
-                        >
-                          <Trash2 className="w-3.5 sm:w-4 h-3.5 sm:h-4" strokeWidth={2.5} />
-                        </button>
-                        <ChevronRight className="w-4 sm:w-5 h-4 sm:h-5 text-muted-foreground group-hover/item:text-primary group-hover/item:translate-x-1 transition-all" />
-                      </div>
-                    </div>
+                    )}
                   </div>
-                </div>
-              ))}
-              {allDisplayEmails.length > PAGE_SIZE && (
-                <div className="text-center pt-4">
-                  <button
-                    onClick={() => setShowAll((prev) => !prev)}
-                    className="text-sm text-primary font-medium hover:underline"
-                  >
-                    {showAll
-                      ? 'Show less'
-                      : `Show all ${allDisplayEmails.length} emails`}
-                  </button>
-                </div>
-              )}
+                );
+              })}
             </div>
           )}
         </div>

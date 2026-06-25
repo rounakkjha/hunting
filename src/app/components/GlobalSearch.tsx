@@ -1,31 +1,26 @@
 import { useState, useRef, useEffect } from 'react';
-import { Search, FileText, Mail, MessageSquare, X } from 'lucide-react';
+import { Search, FileText, Mail, MessageSquare, X, Building2 } from 'lucide-react';
 import { format } from 'date-fns';
-import type { UserData, JobApplication, ColdEmail, LinkedInOutreach } from '../App';
+import type { UserData, JobApplication, ColdEmail, LinkedInOutreach, TargetCompany } from '../App';
 
 interface GlobalSearchProps {
   userData: UserData;
   onNavigate: (section: string) => void;
-  onViewApplication: (app: JobApplication) => void;
-  onViewColdEmail: (email: ColdEmail) => void;
-  onViewLinkedIn: (outreach: LinkedInOutreach) => void;
+  onHighlight: (section: string, id: string) => void;
 }
 
 interface SearchResult {
   id: string;
-  type: 'application' | 'coldEmail' | 'linkedin';
+  type: 'application' | 'coldEmail' | 'linkedin' | 'target';
   title: string;
   subtitle: string;
   date: string;
-  entry: JobApplication | ColdEmail | LinkedInOutreach;
 }
 
 export default function GlobalSearch({
   userData,
   onNavigate,
-  onViewApplication,
-  onViewColdEmail,
-  onViewLinkedIn,
+  onHighlight,
 }: GlobalSearchProps) {
   const [query, setQuery] = useState('');
   const [isOpen, setIsOpen] = useState(false);
@@ -43,22 +38,15 @@ export default function GlobalSearch({
     const q = query.toLowerCase();
     const matched: SearchResult[] = [];
 
-    // Search applications
-    userData.applications.forEach((app) => {
+    // Search applications (exclude quick-apply count-only entries)
+    userData.applications.filter((app) => !app.isQuickApply).forEach((app) => {
       if (
         app.company.toLowerCase().includes(q) ||
         (app.role && app.role.toLowerCase().includes(q)) ||
         (app.source && app.source.toLowerCase().includes(q)) ||
         (app.emailTag && app.emailTag.toLowerCase().includes(q))
       ) {
-        matched.push({
-          id: app.id,
-          type: 'application',
-          title: app.company,
-          subtitle: app.role || 'Job Application',
-          date: app.date,
-          entry: app,
-        });
+        matched.push({ id: app.id, type: 'application', title: app.company, subtitle: app.role || 'Job Application', date: app.date });
       }
     });
 
@@ -69,14 +57,7 @@ export default function GlobalSearch({
         (email.email && email.email.toLowerCase().includes(q)) ||
         (email.role && email.role.toLowerCase().includes(q))
       ) {
-        matched.push({
-          id: email.id,
-          type: 'coldEmail',
-          title: email.company,
-          subtitle: email.email || email.role || 'Cold Email',
-          date: email.date,
-          entry: email,
-        });
+        matched.push({ id: email.id, type: 'coldEmail', title: email.company, subtitle: email.email || email.role || 'Cold Email', date: email.date });
       }
     });
 
@@ -91,18 +72,25 @@ export default function GlobalSearch({
           id: outreach.id,
           type: 'linkedin',
           title: outreach.name || outreach.company || 'LinkedIn Outreach',
-          subtitle: outreach.company
-            ? `${outreach.role || 'Contact'} at ${outreach.company}`
-            : outreach.role || 'LinkedIn Outreach',
+          subtitle: outreach.company ? `${outreach.role || 'Contact'} at ${outreach.company}` : outreach.role || 'LinkedIn Outreach',
           date: outreach.date,
-          entry: outreach,
         });
+      }
+    });
+
+    // Search target companies
+    userData.targetCompanies.forEach((target) => {
+      if (
+        target.company.toLowerCase().includes(q) ||
+        (target.role && target.role.toLowerCase().includes(q))
+      ) {
+        matched.push({ id: target.id, type: 'target', title: target.company, subtitle: target.role || 'Target Company', date: target.date });
       }
     });
 
     // Sort by date descending
     matched.sort((a, b) => b.date.localeCompare(a.date));
-    setResults(matched.slice(0, 10));
+    setResults(matched.slice(0, 12));
     setIsOpen(matched.length > 0);
   }, [query, userData]);
 
@@ -116,25 +104,26 @@ export default function GlobalSearch({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  const sectionMap: Record<string, string> = {
+    application: 'applications',
+    coldEmail: 'emails',
+    linkedin: 'linkedin',
+    target: 'targets',
+  };
+
   const handleSelect = (result: SearchResult) => {
     setIsOpen(false);
     setQuery('');
-    if (result.type === 'application') {
-      onNavigate('applications');
-      setTimeout(() => onViewApplication(result.entry as JobApplication), 100);
-    } else if (result.type === 'coldEmail') {
-      onNavigate('emails');
-      setTimeout(() => onViewColdEmail(result.entry as ColdEmail), 100);
-    } else {
-      onNavigate('linkedin');
-      setTimeout(() => onViewLinkedIn(result.entry as LinkedInOutreach), 100);
-    }
+    const section = sectionMap[result.type];
+    onNavigate(section);
+    setTimeout(() => onHighlight(section, result.id), 150);
   };
 
   const typeConfig = {
     application: { icon: FileText, label: 'Application', color: 'text-indigo-500 bg-indigo-500/10 border-indigo-500/20' },
     coldEmail: { icon: Mail, label: 'Cold Email', color: 'text-blue-500 bg-blue-500/10 border-blue-500/20' },
     linkedin: { icon: MessageSquare, label: 'LinkedIn', color: 'text-violet-500 bg-violet-500/10 border-violet-500/20' },
+    target: { icon: Building2, label: 'Target Co.', color: 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20' },
   };
 
   return (

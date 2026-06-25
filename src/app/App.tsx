@@ -4,7 +4,6 @@ import Login from './components/Login';
 import { ToastProvider } from './components/Toast';
 import { loadFromBackend, saveToBackend } from './utils/api';
 import { loginUser, checkUserExists } from './utils/auth';
-import type { MatchResponse } from './utils/ai';
 
 export interface CustomField {
   id: string;
@@ -31,6 +30,8 @@ export interface JobApplication {
   referrerRole?: string;
   isGreatLakesAlumni?: boolean;
   isQuickApply?: boolean;
+  isActive?: boolean;
+  isRejected?: boolean;
 }
 
 export interface ColdEmail {
@@ -167,17 +168,6 @@ export interface TrashItem {
   data: any;
 }
 
-export interface ResumeAnalysis {
-  id: string;
-  date: string;
-  title?: string;
-  company?: string;
-  role?: string;
-  jdText: string;
-  resumeText: string;
-  result: MatchResponse;
-}
-
 export interface UserData {
   applications: JobApplication[];
   coldEmails: ColdEmail[];
@@ -196,7 +186,6 @@ export interface UserData {
     coldEmails: CustomField[];
     linkedInOutreach: CustomField[];
   };
-  resumeAnalyses: ResumeAnalysis[];
 }
 
 const EMPTY_DATA: UserData = {
@@ -217,7 +206,6 @@ const EMPTY_DATA: UserData = {
     coldEmails: [],
     linkedInOutreach: [],
   },
-  resumeAnalyses: [],
 };
 
 function normalizeData(raw: any): UserData {
@@ -233,10 +221,15 @@ function normalizeData(raw: any): UserData {
   raw.savedLinks = raw.savedLinks || [];
   raw.targetCompanies = raw.targetCompanies || [];
   raw.strategy = raw.strategy || [];
-  raw.interviews = raw.interviews || [];
+  raw.interviews = (raw.interviews || []).map((i: any) => {
+    const rounds = i.rounds || [];
+    // Self-heal: derive createdAt from earliest round date so chart placement is accurate
+    const roundDates = rounds.map((r: any) => r.date).filter(Boolean).sort();
+    const createdAt = roundDates[0] || i.createdAt || new Date().toISOString().slice(0, 10);
+    return { ...i, createdAt, rounds, sources: i.sources || {} };
+  });
   raw.ignoredTargetSuggestions = raw.ignoredTargetSuggestions || [];
   raw.knownCompanies = raw.knownCompanies || [];
-  raw.resumeAnalyses = raw.resumeAnalyses || [];
   raw.trash = (raw.trash || []).filter((t: any) => {
     const deletedAt = new Date(t.deletedAt).getTime();
     const sevenDays = 7 * 24 * 60 * 60 * 1000;
