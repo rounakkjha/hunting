@@ -372,7 +372,7 @@ export default function Dashboard({ userData, setUserData, onLogout, currentUser
                 onNavigate={setActiveSection}
                 onHighlight={handleSearchHighlight}
               />
-              <StatsOverview userData={userData} onNavigate={setActiveSection} isLoading={isLoading} />
+              <StatsOverview userData={filteredData} onNavigate={setActiveSection} isLoading={isLoading} />
               <AdvancedStats userData={filteredData} isLoading={isLoading} />
             </div>
 
@@ -475,7 +475,7 @@ export default function Dashboard({ userData, setUserData, onLogout, currentUser
                     ))}
                   </div>
 
-                  <StatsOverview userData={userData} onNavigate={setActiveSection} isLoading={isLoading} />
+                  <StatsOverview userData={filteredData} onNavigate={setActiveSection} isLoading={isLoading} />
 
                   <button
                     onClick={() => setActiveSection('analytics')}
