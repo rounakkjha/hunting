@@ -373,7 +373,7 @@ export default function Dashboard({ userData, setUserData, onLogout, currentUser
                 onHighlight={handleSearchHighlight}
               />
               <StatsOverview userData={filteredData} onNavigate={setActiveSection} isLoading={isLoading} />
-              <AdvancedStats userData={filteredData} isLoading={isLoading} />
+              <AdvancedStats userData={filteredData} isLoading={isLoading} dateRange={dateRange} />
             </div>
 
             {/* Mobile: conditional content */}
@@ -1228,7 +1228,7 @@ export default function Dashboard({ userData, setUserData, onLogout, currentUser
           <div className="space-y-6">
             <h2 className="text-3xl font-bold">Analytics</h2>
             <DateFilter dateRange={dateRange} onDateRangeChange={setDateRange} />
-            <AdvancedStats userData={filteredData} />
+            <AdvancedStats userData={filteredData} dateRange={dateRange} />
           </div>
         );
 

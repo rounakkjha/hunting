@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { format, subDays, eachDayOfInterval } from 'date-fns';
+import { format, subDays, eachDayOfInterval, parseISO, differenceInDays } from 'date-fns';
 import useNow from '../hooks/useNow';
 import {
   BarChart,
@@ -15,23 +15,26 @@ import {
 } from 'recharts';
 import { TrendingUp, TrendingDown, Activity, Clock, Target, Zap, CheckCircle2, Flame, MailCheck, Mail, MessageSquare, Users } from 'lucide-react';
 import type { UserData } from '../App';
+import type { DateRange } from './DateFilter';
 
 interface AdvancedStatsProps {
   userData: UserData;
   isLoading?: boolean;
+  dateRange?: DateRange;
 }
 
-export default function AdvancedStats({ userData, isLoading }: AdvancedStatsProps) {
+export default function AdvancedStats({ userData, isLoading, dateRange }: AdvancedStatsProps) {
   const now = useNow(1000);
   const currentTime = format(now, 'hh:mm a');
 
-  // Weekly activity data
-  const last7Days = eachDayOfInterval({
-    start: subDays(now, 6),
-    end: now,
-  });
+  // Determine chart interval from the selected date filter
+  const isAllTime = !dateRange || dateRange.label === 'All Time';
+  const startDate = isAllTime ? subDays(now, 6) : parseISO(dateRange.start);
+  const endDate = isAllTime ? now : parseISO(dateRange.end);
+  const chartDays = eachDayOfInterval({ start: startDate, end: endDate });
+  const prevPeriodDays = chartDays.length;
 
-  const weeklyData = last7Days.map((day, index) => {
+  const activityDataChart = chartDays.map((day, index) => {
     const dayStr = format(day, 'yyyy-MM-dd');
     const applications = userData.applications.filter((a) => a.date === dayStr).length;
     const coldEmails = userData.coldEmails.filter((e) => e.date === dayStr).length;
@@ -52,13 +55,12 @@ export default function AdvancedStats({ userData, isLoading }: AdvancedStatsProp
     };
   });
 
-  // Previous week data for trend comparison
-  const prev7Days = eachDayOfInterval({
-    start: subDays(now, 13),
-    end: subDays(now, 7),
-  });
+  // Previous period trend comparison (same length as the chart interval)
+  const prevPeriodStart = subDays(startDate, prevPeriodDays);
+  const prevPeriodEnd = subDays(startDate, 1);
+  const prevPeriodDaysArr = eachDayOfInterval({ start: prevPeriodStart, end: prevPeriodEnd });
 
-  const prevWeekTotal = prev7Days.reduce((sum, day) => {
+  const prevPeriodTotal = prevPeriodDaysArr.reduce((sum, day) => {
     const dayStr = format(day, 'yyyy-MM-dd');
     const applications = userData.applications.filter((a) => a.date === dayStr).length;
     const coldEmails = userData.coldEmails.filter((e) => e.date === dayStr).length;
@@ -68,11 +70,11 @@ export default function AdvancedStats({ userData, isLoading }: AdvancedStatsProp
     return sum + applications + coldEmails + linkedInOutreach + targetCompanies + interviews;
   }, 0);
 
-  const thisWeekTotal = weeklyData.reduce((sum, day) => sum + day.total, 0);
-  const avgPerDay = (thisWeekTotal / 7).toFixed(1);
-  const weekTrend = prevWeekTotal > 0
-    ? Math.round(((thisWeekTotal - prevWeekTotal) / prevWeekTotal) * 100)
-    : thisWeekTotal > 0 ? 100 : 0;
+  const currentPeriodTotal = activityDataChart.reduce((sum, day) => sum + day.total, 0);
+  const avgPerDay = prevPeriodDays > 0 ? (currentPeriodTotal / prevPeriodDays).toFixed(1) : '0.0';
+  const weekTrend = prevPeriodTotal > 0
+    ? Math.round(((currentPeriodTotal - prevPeriodTotal) / prevPeriodTotal) * 100)
+    : currentPeriodTotal > 0 ? 100 : 0;
 
   // Response rate: cold emails + LinkedIn outreach
   const totalEmails = userData.coldEmails.length;
@@ -388,9 +390,9 @@ export default function AdvancedStats({ userData, isLoading }: AdvancedStatsProp
               </div>
             </div>
 
-            {weeklyData.some(d => d.total > 0) ? (
+            {activityDataChart.some(d => d.total > 0) ? (
               <ResponsiveContainer width="100%" height={220} className="sm:!h-[280px]">
-                <BarChart data={weeklyData} id="weekly-bar-chart">
+                <BarChart data={activityDataChart} id="weekly-bar-chart">
                   <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-border/30" vertical={false} />
                   <XAxis
                     dataKey="day"
