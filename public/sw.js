@@ -1,4 +1,4 @@
-const CACHE_NAME = 'huntlog-v1';
+const CACHE_NAME = 'huntlog-v2';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
@@ -57,6 +57,33 @@ self.addEventListener('fetch', (event) => {
     return;
   }
   if (event.request.url.includes('/api/') || event.request.url.includes('supabase')) {
+    return;
+  }
+
+  // Navigation requests (index.html): network-first so new deploys are picked up immediately.
+  // Hashed static assets (JS/CSS): cache-first for offline support.
+  const isNavigate = event.request.mode === 'navigate';
+  const isDocument = event.request.destination === 'document';
+
+  if (isNavigate || isDocument) {
+    event.respondWith(
+      fetch(event.request)
+        .then((response) => {
+          if (response && response.status === 200) {
+            const responseToCache = response.clone();
+            caches.open(CACHE_NAME).then((cache) => {
+              cache.put(event.request, responseToCache);
+            });
+          }
+          return response;
+        })
+        .catch(() => {
+          return caches.match(event.request).then((cached) => {
+            if (cached) return cached;
+            return caches.match('/index.html');
+          });
+        })
+    );
     return;
   }
 
