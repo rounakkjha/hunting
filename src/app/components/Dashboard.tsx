@@ -847,17 +847,20 @@ export default function Dashboard({ userData, setUserData, onLogout, currentUser
               onUpdateRound={(interviewId, roundId, updates) => {
                 setUserData((prev) => ({
                   ...prev,
-                  interviews: prev.interviews.map((i) =>
-                    i.id === interviewId
-                      ? {
-                          ...i,
-                          rounds: i.rounds.map((r) =>
-                            r.id === roundId ? { ...r, ...updates } : r
-                          ),
-                          updatedAt: format(new Date(), 'yyyy-MM-dd'),
-                        }
-                      : i
-                  ),
+                  interviews: prev.interviews.map((i) => {
+                    if (i.id !== interviewId) return i;
+                    const updatedRounds = i.rounds.map((r) =>
+                      r.id === roundId ? { ...r, ...updates } : r
+                    );
+                    // If any round is rejected, the whole interview is rejected
+                    const anyRejected = updatedRounds.some((r) => r.status === 'rejected');
+                    return {
+                      ...i,
+                      rounds: updatedRounds,
+                      status: anyRejected ? 'rejected' : i.status,
+                      updatedAt: format(new Date(), 'yyyy-MM-dd'),
+                    };
+                  }),
                 }));
               }}
               onUpdateStatus={(id, status) => {
@@ -886,9 +889,11 @@ export default function Dashboard({ userData, setUserData, onLogout, currentUser
               companies={userData.targetCompanies}
               onAdd={(company, role, date, jobUrl, referralStatus) => {
                 const newTargetId = Date.now().toString();
+                const today = format(new Date(), 'yyyy-MM-dd');
                 const newTarget: UserData['targetCompanies'][number] = {
                   id: newTargetId,
-                  date: date || format(new Date(), 'yyyy-MM-dd'),
+                  date: date || today,
+                  updatedAt: referralStatus ? today : undefined,
                   company,
                   role,
                   jobUrl,
@@ -968,7 +973,7 @@ export default function Dashboard({ userData, setUserData, onLogout, currentUser
                   const company = prev.targetCompanies.find((c) => c.id === companyId);
                   const isMarkingDone = updates.referralStatus === 'done' && company?.referralStatus !== 'done' && !company?.referralApplicationCreated;
                   const updatedTargets = prev.targetCompanies.map((c) =>
-                    c.id === companyId ? { ...c, ...updates } : c
+                    c.id === companyId ? { ...c, ...updates, updatedAt: format(new Date(), 'yyyy-MM-dd') } : c
                   );
                   if (!isMarkingDone) {
                     return { ...prev, targetCompanies: updatedTargets };

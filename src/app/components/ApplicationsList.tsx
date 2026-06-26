@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { format } from 'date-fns';
-import { FileText, Trash2, Briefcase, ChevronRight, Mail, MailCheck, Tag, Users, Download, ExternalLink, Hash, Search, X, Filter, Pencil, XCircle, Zap } from 'lucide-react';
+import { FileText, Trash2, Briefcase, ChevronRight, Mail, MailCheck, Tag, Users, Download, ExternalLink, Hash, Search, X, Filter, Pencil, XCircle, Zap, RotateCcw } from 'lucide-react';
 import type { JobApplication } from '../App';
 
 function SourceBadge({ source }: { source: string }) {
@@ -316,7 +316,7 @@ export default function ApplicationsList({ applications, onDelete, onViewDetails
                             }}
                             className={`sm:opacity-0 sm:group-hover/item:opacity-100 p-1.5 sm:p-2.5 rounded-lg sm:rounded-xl border border-transparent transition-all ${
                               app.isRejected
-                                ? 'text-red-500 bg-red-500/10 border-red-500/20 sm:opacity-100'
+                                ? 'text-red-500 bg-red-500/10 border-red-500/20 hover:bg-red-500/20'
                                 : app.isActive
                                 ? 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20 sm:opacity-100'
                                 : 'text-muted-foreground hover:bg-emerald-500/10 hover:text-emerald-500 hover:border-emerald-500/20'
@@ -328,7 +328,7 @@ export default function ApplicationsList({ applications, onDelete, onViewDetails
                             }
                           >
                             {app.isRejected
-                              ? <XCircle className="w-3.5 sm:w-4 h-3.5 sm:h-4" strokeWidth={2.5} />
+                              ? <RotateCcw className="w-3.5 sm:w-4 h-3.5 sm:h-4" strokeWidth={2.5} />
                               : app.isActive
                               ? <Zap className="w-3.5 sm:w-4 h-3.5 sm:h-4" strokeWidth={2.5} />
                               : <Zap className="w-3.5 sm:w-4 h-3.5 sm:h-4" strokeWidth={2.5} />}

@@ -148,6 +148,7 @@ export type ReferralStatus = 'asked' | 'awaiting' | 'done';
 export interface TargetCompany {
   id: string;
   date: string;
+  updatedAt?: string;
   company: string;
   role?: string;
   jobUrl?: string;
@@ -219,7 +220,10 @@ function normalizeData(raw: any): UserData {
   raw.contentLibrary = raw.contentLibrary || [];
   raw.todos = raw.todos || [];
   raw.savedLinks = raw.savedLinks || [];
-  raw.targetCompanies = raw.targetCompanies || [];
+  raw.targetCompanies = (raw.targetCompanies || []).map((c: any) => ({
+    ...c,
+    updatedAt: c.updatedAt || c.date,
+  }));
   raw.strategy = raw.strategy || [];
   raw.interviews = (raw.interviews || []).map((i: any) => {
     const rounds = i.rounds || [];

@@ -489,6 +489,9 @@ export default function TargetCompanies({
                           {company.referralStatus && (
                             <span className={`ml-2 inline-flex items-center px-2 py-0.5 rounded-md border text-[10px] font-medium ${REFERRAL_STATUS_COLORS[company.referralStatus]}`}>
                               {REFERRAL_STATUS_LABELS[company.referralStatus]}
+                              {company.updatedAt && (
+                                <span className="ml-1.5 opacity-80">· {format(new Date(company.updatedAt), 'MMM dd')}</span>
+                              )}
                             </span>
                           )}
                         </p>
