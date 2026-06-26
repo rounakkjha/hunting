@@ -34,6 +34,9 @@ export default function AdvancedStats({ userData, isLoading, dateRange }: Advanc
   const chartDays = eachDayOfInterval({ start: startDate, end: endDate });
   const prevPeriodDays = chartDays.length;
 
+  // Streak mini-chart always shows the last 7 days
+  const last7Days = eachDayOfInterval({ start: subDays(now, 6), end: now });
+
   const activityDataChart = chartDays.map((day, index) => {
     const dayStr = format(day, 'yyyy-MM-dd');
     const applications = userData.applications.filter((a) => a.date === dayStr).length;
