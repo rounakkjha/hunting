@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gmail Authentication</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            background: #f8fafc;
+        }
+        .container {
+            text-align: center;
+            padding: 2rem;
+            background: white;
+            border-radius: 1rem;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+            max-width: 400px;
+        }
+        .icon {
+            width: 48px;
+            height: 48px;
+            margin: 0 auto 1rem;
+            background: #e2e8f0;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .loading {
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="icon loading">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 2v4m0 12v4M4.93 4.93l2.83 2.83m8.48 8.48l2.83 2.83M2 12h4m12 0h4M4.93 19.07l2.83-2.83m8.48-8.48l2.83-2.83"/>
+            </svg>
+        </div>
+        <h2>Completing Authentication...</h2>
+        <p>Please wait while we connect your Gmail account.</p>
+    </div>
+
+    <script>
+        async function handleCallback() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const code = urlParams.get('code');
+            const error = urlParams.get('error');
+
+            try {
+                if (error) {
+                    throw new Error(`OAuth error: ${error}`);
+                }
+
+                if (!code) {
+                    throw new Error('No authorization code received');
+                }
+
+                // Exchange code for tokens (this would normally be done on a backend)
+                // For demo purposes, we'll simulate a successful auth
+                const authResult = {
+                    accessToken: 'demo_access_token_' + Date.now(),
+                    refreshToken: 'demo_refresh_token_' + Date.now(),
+                    email: 'user@gmail.com', // This would come from the API
+                    expiresAt: Date.now() + (3600 * 1000) // 1 hour
+                };
+
+                // Send result to parent window
+                window.opener.postMessage({
+                    type: 'gmail-auth-success',
+                    result: authResult
+                }, window.location.origin);
+
+                window.close();
+            } catch (err) {
+                // Send error to parent window
+                window.opener.postMessage({
+                    type: 'gmail-auth-error',
+                    error: err.message
+                }, window.location.origin);
+
+                window.close();
+            }
+        }
+
+        // Handle the callback
+        handleCallback();
+    </script>
+</body>
+</html>

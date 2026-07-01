@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
-import { Mail, Settings, Clock, CheckCircle, AlertCircle, RefreshCw, Trash2, Plus, Calendar, Bell } from 'lucide-react';
+import { Mail, Settings, Clock, CheckCircle, AlertCircle, RefreshCw, Trash2, Plus, Calendar, Bell, Loader2 } from 'lucide-react';
 import type { EmailSettings, ScheduledEmail } from '../App';
+import { gmailService, type GmailAuthResult } from '../utils/gmail';
 
 interface EmailSettingsProps {
   emailSettings?: EmailSettings;
@@ -37,20 +38,35 @@ export default function EmailSettings({
     }
   }, [emailSettings]);
 
+  
+
   const handleConnectGmail = async () => {
     setIsConnecting(true);
     try {
-      // In a real implementation, this would initiate OAuth flow
-      // For now, we'll simulate the connection
-      const newSettings: EmailSettings = {
-        id: Date.now().toString(),
-        provider: 'gmail',
+      // Store form data for after OAuth callback
+      const connectSettings = {
         email: formData.email,
         fromName: formData.fromName,
-        isConnected: true,
         autoSendEnabled: formData.autoSendEnabled,
         followUpDelay: formData.followUpDelay,
         scheduleTime: formData.scheduleTime,
+      };
+      
+      // Initiate OAuth flow with popup
+      const authResult = await gmailService.initiateOAuth();
+      
+      // Create email settings with OAuth tokens
+      const newSettings: EmailSettings = {
+        id: Date.now().toString(),
+        provider: 'gmail',
+        email: authResult.email,
+        fromName: connectSettings.fromName,
+        accessToken: authResult.accessToken,
+        refreshToken: authResult.refreshToken,
+        isConnected: true,
+        autoSendEnabled: connectSettings.autoSendEnabled,
+        followUpDelay: connectSettings.followUpDelay,
+        scheduleTime: connectSettings.scheduleTime,
         lastSync: new Date().toISOString(),
       };
       
@@ -58,6 +74,7 @@ export default function EmailSettings({
       setShowSettings(false);
     } catch (error) {
       console.error('Failed to connect Gmail:', error);
+      alert('Failed to connect Gmail: ' + (error instanceof Error ? error.message : 'Unknown error'));
     } finally {
       setIsConnecting(false);
     }
@@ -260,9 +277,16 @@ export default function EmailSettings({
                   <button
                     onClick={handleConnectGmail}
                     disabled={isConnecting || !formData.email || !formData.fromName}
-                    className="flex-1 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="flex-1 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                   >
-                    {isConnecting ? 'Connecting...' : 'Connect Gmail'}
+                    {isConnecting ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Connecting...
+                      </>
+                    ) : (
+                      'Connect Gmail'
+                    )}
                   </button>
                   <button
                     onClick={() => setShowSettings(false)}
