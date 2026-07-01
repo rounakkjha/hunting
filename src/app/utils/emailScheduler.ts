@@ -1,4 +1,5 @@
 import { gmailService } from './gmail';
+import { emailSender } from './emailSender';
 import type { EmailSettings, ScheduledEmail, ColdEmail } from '../App';
 
 export interface EmailTemplate {
@@ -165,12 +166,33 @@ export class EmailScheduler {
 
     for (const scheduledEmail of dueEmails) {
       try {
-        await this.sendScheduledEmail(scheduledEmail, emailSettings);
+        // Get the cold email data (this would normally come from the main app state)
+        // For now, we'll create a minimal cold email object
+        const coldEmail: ColdEmail = {
+          id: scheduledEmail.coldEmailId,
+          email: 'recipient@example.com', // This would come from the actual cold email
+          company: 'Company Name',
+          role: 'Position',
+          date: new Date().toISOString().split('T')[0],
+          status: 'sent',
+          gotResponse: false,
+          followUpDone: false,
+          isFollowUp: false,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
+
+        const result = await emailSender.sendScheduledEmail(scheduledEmail, emailSettings, coldEmail);
         
-        // Update the email as sent
+        // Update the email based on the result
         const updatedEmails = scheduledEmails.map(email =>
           email.id === scheduledEmail.id
-            ? { ...email, sent: true, sentAt: new Date().toISOString() }
+            ? { 
+                ...email, 
+                sent: result.success, 
+                sentAt: result.success ? result.sentAt : undefined,
+                error: result.success ? undefined : result.error
+              }
             : email
         );
         

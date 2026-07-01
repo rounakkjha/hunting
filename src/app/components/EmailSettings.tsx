@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
-import { Mail, Settings, Clock, CheckCircle, AlertCircle, RefreshCw, Trash2, Plus, Calendar, Bell, Loader2 } from 'lucide-react';
+import { Mail, Settings, Clock, CheckCircle, AlertCircle, RefreshCw, Trash2, Plus, Calendar, Bell, Loader2, BarChart3 } from 'lucide-react';
 import type { EmailSettings, ScheduledEmail } from '../App';
 import { gmailService, type GmailAuthResult } from '../utils/gmail';
 import { emailScheduler, type EmailTemplate } from '../utils/emailScheduler';
+import { emailSender } from '../utils/emailSender';
 import EmailTemplates from './EmailTemplates';
 import AdvancedEmailSettings from './AdvancedEmailSettings';
+import EmailAnalytics from './EmailAnalytics';
 
 interface EmailSettingsProps {
   emailSettings?: EmailSettings;
@@ -29,7 +31,7 @@ export default function EmailSettings({
     autoSendEnabled: true,
   });
   
-  const [activeTab, setActiveTab] = useState<'settings' | 'templates' | 'advanced'>('settings');
+  const [activeTab, setActiveTab] = useState<'settings' | 'templates' | 'advanced' | 'analytics'>('settings');
   const [templates, setTemplates] = useState<EmailTemplate[]>(() => 
     emailScheduler.getDefaultTemplates()
   );
@@ -131,6 +133,21 @@ export default function EmailSettings({
     }
   };
 
+  const handleSendTestEmail = async () => {
+    if (!emailSettings) return;
+    
+    try {
+      const result = await emailSender.sendTestEmail(emailSettings);
+      if (result.success) {
+        alert('Test email sent successfully! Please check your inbox.');
+      } else {
+        alert('Failed to send test email: ' + result.error);
+      }
+    } catch (error) {
+      alert('Error sending test email: ' + (error instanceof Error ? error.message : 'Unknown error'));
+    }
+  };
+
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleString();
   };
@@ -196,6 +213,17 @@ export default function EmailSettings({
             <Settings className="w-4 h-4" />
             Advanced
           </button>
+          <button
+            onClick={() => setActiveTab('analytics')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-md transition-all ${
+              activeTab === 'analytics'
+                ? 'bg-background text-foreground shadow-sm'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <BarChart3 className="w-4 h-4" />
+            Analytics
+          </button>
         </div>
       )}
 
@@ -235,6 +263,13 @@ export default function EmailSettings({
           </div>
           {emailSettings?.isConnected && (
             <div className="flex gap-2 shrink-0">
+              <button
+                onClick={handleSendTestEmail}
+                className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-all"
+                title="Send Test Email"
+              >
+                <Mail className="w-4 h-4" />
+              </button>
               <button
                 onClick={() => setShowSettings(true)}
                 className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-all"
@@ -501,6 +536,17 @@ export default function EmailSettings({
         <AdvancedEmailSettings
           emailSettings={emailSettings}
           onUpdateSettings={onUpdateSettings}
+        />
+      )}
+
+      {/* Analytics Tab */}
+      {emailSettings?.isConnected && activeTab === 'analytics' && (
+        <EmailAnalytics
+          scheduledEmails={scheduledEmails || []}
+          onRetryEmail={(emailId) => {
+            // This would trigger a retry of the failed email
+            console.log('Retry email:', emailId);
+          }}
         />
       )}
     </div>
