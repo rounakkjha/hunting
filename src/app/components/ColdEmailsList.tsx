@@ -197,6 +197,10 @@ export default function ColdEmailsList({ coldEmails, onDelete, onViewDetails, on
                 const hasResponse = emails.some((e) => e.gotResponse);
                 const hasHighlight = emails.some((e) => e.id === highlightedId);
                 const initials = (company || '?').slice(0, 2).toUpperCase();
+                
+                // Check for follow-up status in initial emails
+                const initialEmails = emails.filter(e => !e.isFollowUp);
+                const followUpStatus = initialEmails.length > 0 ? getFollowUpStatus(initialEmails[0]) : null;
                 return (
                   <div key={companyKey} className={`rounded-2xl border overflow-hidden transition-all duration-200 ${hasHighlight ? 'border-primary/60 shadow-lg shadow-primary/10' : 'border-border/50 hover:border-primary/30 hover:shadow-md hover:shadow-primary/5'}`}>
                     {/* Company header */}
@@ -216,6 +220,22 @@ export default function ColdEmailsList({ coldEmails, onDelete, onViewDetails, on
                         {hasResponse && (
                           <span className="shrink-0 hidden sm:flex items-center gap-1 text-[11px] text-primary font-semibold px-2 py-0.5 bg-primary/10 border border-primary/20 rounded-full">
                             <MailCheck className="w-3 h-3" /> Replied
+                          </span>
+                        )}
+                        {followUpStatus && followUpStatus.status !== 'done' && (
+                          <span className={`shrink-0 flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full border ${
+                            followUpStatus.color === 'overdue' ? 'text-red-400 bg-red-500/10 border-red-500/20' :
+                            followUpStatus.color === 'due' ? 'text-amber-400 bg-amber-500/10 border-amber-500/20' :
+                            'text-primary bg-primary/10 border-primary/20'
+                          }`}>
+                            {followUpStatus.status === 'overdue' && <AlertCircle className="w-3 h-3" />}
+                            {followUpStatus.status === 'due' && <AlertCircle className="w-3 h-3" />}
+                            <span className="hidden sm:inline">{followUpStatus.label}</span>
+                            <span className="sm:hidden">
+                              {followUpStatus.status === 'overdue' ? 'Overdue' :
+                               followUpStatus.status === 'due' ? 'Due Today' :
+                               format(addDays(new Date(initialEmails[0].date), 3), 'MMM dd')}
+                            </span>
                           </span>
                         )}
                       </div>

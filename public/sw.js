@@ -46,17 +46,22 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Only handle HTTP/HTTPS requests (ignore chrome-extension:// and other schemes)
+  // Only handle HTTP/HTTPS requests (ignore chrome-extension://, blob:, data:, and other schemes)
   const requestUrl = new URL(event.request.url);
   if (requestUrl.protocol !== 'http:' && requestUrl.protocol !== 'https:') {
     return;
   }
 
-  // Skip cross-origin requests (analytics, CDN, etc.) and API requests
+  // Skip cross-origin requests (analytics, CDN, etc.), API requests, and blob URLs
   if (requestUrl.origin !== self.location.origin) {
     return;
   }
   if (event.request.url.includes('/api/') || event.request.url.includes('supabase')) {
+    return;
+  }
+  
+  // Skip blob URLs (used for downloads)
+  if (event.request.url.startsWith('blob:')) {
     return;
   }
 
