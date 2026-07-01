@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { format } from 'date-fns';
 import useNow from '../hooks/useNow';
 import {
@@ -47,6 +47,7 @@ import { useToast } from './Toast';
 import StrategyBoard from './StrategyBoard';
 import UserManagement from './UserManagement';
 import EmailSettings from './EmailSettings';
+import { emailScheduler } from '../utils/emailScheduler';
 
 interface DashboardProps {
   userData: UserData;
@@ -173,6 +174,23 @@ export default function Dashboard({ userData, setUserData, onLogout, currentUser
   const [passwordError, setPasswordError] = useState('');
   const [highlightedEntry, setHighlightedEntry] = useState<{ section: string; id: string } | null>(null);
   const { showToast } = useToast();
+
+  // Initialize email scheduler
+  useEffect(() => {
+    if (userData.emailSettings?.isConnected && userData.emailSettings.autoSendEnabled) {
+      emailScheduler.start(
+        userData.emailSettings,
+        userData.scheduledEmails,
+        (updatedEmails) => {
+          setUserData((prev) => ({ ...prev, scheduledEmails: updatedEmails }));
+        }
+      );
+    }
+
+    return () => {
+      emailScheduler.stop();
+    };
+  }, [userData.emailSettings, userData.scheduledEmails, setUserData]);
 
   const handleSearchHighlight = (section: string, id: string) => {
     setHighlightedEntry({ section, id });
@@ -1413,7 +1431,23 @@ export default function Dashboard({ userData, setUserData, onLogout, currentUser
                   case 'application':
                     return { ...prev, applications: [newEntry as any, ...prev.applications] };
                   case 'coldEmail':
-                    return { ...prev, coldEmails: [newEntry as any, ...prev.coldEmails] };
+                    const updatedColdEmails = [newEntry as any, ...prev.coldEmails];
+                    
+                    // Schedule follow-up if email settings are configured
+                    let updatedScheduledEmails = prev.scheduledEmails;
+                    if (prev.emailSettings?.isConnected && prev.emailSettings.autoSendEnabled) {
+                      updatedScheduledEmails = emailScheduler.scheduleFollowUp(
+                        newEntry as any,
+                        prev.emailSettings,
+                        prev.scheduledEmails
+                      );
+                    }
+                    
+                    return { 
+                      ...prev, 
+                      coldEmails: updatedColdEmails,
+                      scheduledEmails: updatedScheduledEmails
+                    };
                   case 'linkedin':
                     return { ...prev, linkedInOutreach: [newEntry as any, ...prev.linkedInOutreach] };
                   case 'content':

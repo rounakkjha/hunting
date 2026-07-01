@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Mail, Settings, Clock, CheckCircle, AlertCircle, RefreshCw, Trash2, Plus, Calendar, Bell, Loader2 } from 'lucide-react';
 import type { EmailSettings, ScheduledEmail } from '../App';
 import { gmailService, type GmailAuthResult } from '../utils/gmail';
+import { emailScheduler } from '../utils/emailScheduler';
 
 interface EmailSettingsProps {
   emailSettings?: EmailSettings;
@@ -308,6 +309,43 @@ export default function EmailSettings({
             <Calendar className="w-5 h-5" />
             Scheduled Emails
           </h3>
+          
+          {/* Upcoming Emails */}
+          {(() => {
+            const upcomingEmails = emailScheduler.getUpcomingEmails(scheduledEmails || [], 24);
+            if (upcomingEmails.length === 0) return null;
+            
+            return (
+              <div>
+                <h4 className="font-medium text-blue-500 mb-2 flex items-center gap-2">
+                  <Bell className="w-4 h-4" />
+                  Next 24 Hours ({upcomingEmails.length})
+                </h4>
+                <div className="space-y-2">
+                  {upcomingEmails.map((email) => (
+                    <div key={email.id} className="flex items-center justify-between p-3 bg-blue-500/5 border border-blue-500/20 rounded-lg">
+                      <div>
+                        <p className="font-medium text-sm">Follow-up Email</p>
+                        <p className="text-xs text-muted-foreground">
+                          Scheduled for: {formatDate(email.scheduledFor)}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-blue-500 font-medium">Upcoming</span>
+                        <button
+                          onClick={() => onDeleteScheduledEmail(email.id)}
+                          className="p-1 text-red-400 hover:text-red-500 hover:bg-red-500/10 rounded transition-all"
+                          title="Cancel"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
           
           {pendingEmails.length === 0 && sentEmails.length === 0 ? (
             <div className="text-center py-12 border border-border/50 rounded-2xl">
