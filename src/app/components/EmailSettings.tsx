@@ -4,7 +4,7 @@ import type { EmailSettings, ScheduledEmail } from '../App';
 
 interface EmailSettingsProps {
   emailSettings?: EmailSettings;
-  scheduledEmails: ScheduledEmail[];
+  scheduledEmails?: ScheduledEmail[];
   onUpdateSettings: (settings: EmailSettings) => void;
   onDeleteScheduledEmail: (id: string) => void;
 }
@@ -88,8 +88,8 @@ export default function EmailSettings({
     return new Date(dateString).toLocaleString();
   };
 
-  const pendingEmails = scheduledEmails.filter(e => !e.sent);
-  const sentEmails = scheduledEmails.filter(e => e.sent);
+  const pendingEmails = (scheduledEmails || []).filter(e => !e.sent);
+  const sentEmails = (scheduledEmails || []).filter(e => e.sent);
 
   return (
     <div className="space-y-6">
