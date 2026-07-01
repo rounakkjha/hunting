@@ -224,9 +224,9 @@ export default function ColdEmailsList({ coldEmails, onDelete, onViewDetails, on
                         )}
                         {followUpStatus && followUpStatus.status !== 'done' && (
                           <span className={`shrink-0 flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full border ${
-                            followUpStatus.color === 'overdue' ? 'text-red-400 bg-red-500/10 border-red-500/20' :
-                            followUpStatus.color === 'due' ? 'text-amber-400 bg-amber-500/10 border-amber-500/20' :
-                            'text-primary bg-primary/10 border-primary/20'
+                            followUpStatus.color === 'red' ? 'text-red-500 bg-red-50 border-red-200 dark:text-red-400 dark:bg-red-950 dark:border-red-800' :
+                            followUpStatus.color === 'amber' ? 'text-amber-600 bg-amber-50 border-amber-200 dark:text-amber-400 dark:bg-amber-950 dark:border-amber-800' :
+                            'text-blue-600 bg-blue-50 border-blue-200 dark:text-blue-400 dark:bg-blue-950 dark:border-blue-800'
                           }`}>
                             {followUpStatus.status === 'overdue' && <AlertCircle className="w-3 h-3" />}
                             {followUpStatus.status === 'due' && <AlertCircle className="w-3 h-3" />}
