@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { Mail, Settings, Clock, CheckCircle, AlertCircle, RefreshCw, Trash2, Plus, Calendar, Bell, Loader2 } from 'lucide-react';
 import type { EmailSettings, ScheduledEmail } from '../App';
 import { gmailService, type GmailAuthResult } from '../utils/gmail';
-import { emailScheduler } from '../utils/emailScheduler';
+import { emailScheduler, type EmailTemplate } from '../utils/emailScheduler';
+import EmailTemplates from './EmailTemplates';
 
 interface EmailSettingsProps {
   emailSettings?: EmailSettings;
@@ -26,6 +27,12 @@ export default function EmailSettings({
     scheduleTime: '09:00',
     autoSendEnabled: true,
   });
+  
+  const [activeTab, setActiveTab] = useState<'settings' | 'templates'>('settings');
+  const [templates, setTemplates] = useState<EmailTemplate[]>(() => 
+    emailScheduler.getDefaultTemplates()
+  );
+  const [selectedTemplateId, setSelectedTemplateId] = useState('follow-up-1');
 
   useEffect(() => {
     if (emailSettings) {
@@ -102,6 +109,27 @@ export default function EmailSettings({
     }
   };
 
+  const handleTemplateCreate = (template: Omit<EmailTemplate, 'id'>) => {
+    const newTemplate: EmailTemplate = {
+      ...template,
+      id: Date.now().toString(),
+    };
+    setTemplates([...templates, newTemplate]);
+  };
+
+  const handleTemplateUpdate = (updatedTemplate: EmailTemplate) => {
+    setTemplates(templates.map(t => 
+      t.id === updatedTemplate.id ? updatedTemplate : t
+    ));
+  };
+
+  const handleTemplateDelete = (templateId: string) => {
+    setTemplates(templates.filter(t => t.id !== templateId));
+    if (selectedTemplateId === templateId) {
+      setSelectedTemplateId(templates[0]?.id || '');
+    }
+  };
+
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleString();
   };
@@ -130,6 +158,34 @@ export default function EmailSettings({
           </div>
         )}
       </div>
+
+      {/* Tab Navigation */}
+      {emailSettings?.isConnected && (
+        <div className="flex gap-1 p-1 bg-muted rounded-lg">
+          <button
+            onClick={() => setActiveTab('settings')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-md transition-all ${
+              activeTab === 'settings'
+                ? 'bg-background text-foreground shadow-sm'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <Settings className="w-4 h-4" />
+            Settings
+          </button>
+          <button
+            onClick={() => setActiveTab('templates')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-md transition-all ${
+              activeTab === 'templates'
+                ? 'bg-background text-foreground shadow-sm'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <Mail className="w-4 h-4" />
+            Templates
+          </button>
+        </div>
+      )}
 
       {/* Connection Status */}
       <div className={`rounded-2xl border p-4 sm:p-6 ${
@@ -414,6 +470,18 @@ export default function EmailSettings({
             </div>
           )}
         </div>
+      )}
+
+      {/* Templates Tab */}
+      {emailSettings?.isConnected && activeTab === 'templates' && (
+        <EmailTemplates
+          templates={templates}
+          selectedTemplateId={selectedTemplateId}
+          onTemplateSelect={setSelectedTemplateId}
+          onTemplateCreate={handleTemplateCreate}
+          onTemplateUpdate={handleTemplateUpdate}
+          onTemplateDelete={handleTemplateDelete}
+        />
       )}
     </div>
   );
