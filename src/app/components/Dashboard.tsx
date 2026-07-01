@@ -1258,19 +1258,21 @@ export default function Dashboard({ userData, setUserData, onLogout, currentUser
 
       case 'email-automation':
         return (
-          <EmailSettings
-            emailSettings={userData.emailSettings}
-            scheduledEmails={userData.scheduledEmails}
-            onUpdateSettings={(settings) => {
-              setUserData((prev) => ({ ...prev, emailSettings: settings }));
-            }}
-            onDeleteScheduledEmail={(id) => {
-              setUserData((prev) => ({
-                ...prev,
-                scheduledEmails: prev.scheduledEmails.filter((e) => e.id !== id),
-              }));
-            }}
-          />
+          <div className="w-full overflow-hidden">
+            <EmailSettings
+              emailSettings={userData.emailSettings}
+              scheduledEmails={userData.scheduledEmails}
+              onUpdateSettings={(settings) => {
+                setUserData((prev) => ({ ...prev, emailSettings: settings }));
+              }}
+              onDeleteScheduledEmail={(id) => {
+                setUserData((prev) => ({
+                  ...prev,
+                  scheduledEmails: prev.scheduledEmails.filter((e) => e.id !== id),
+                }));
+              }}
+            />
+          </div>
         );
 
       case 'users':

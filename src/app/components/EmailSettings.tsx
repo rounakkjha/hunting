@@ -156,10 +156,10 @@ export default function EmailSettings({
   const sentEmails = (scheduledEmails || []).filter(e => e.sent);
 
   return (
-    <div className="w-full max-w-5xl mx-auto px-3 sm:px-4 lg:px-6 space-y-4 sm:space-y-6 overflow-x-hidden">
+    <div className="w-full max-w-4xl mx-auto px-2 sm:px-3 lg:px-4 space-y-3 sm:space-y-4 overflow-hidden">
       <div className="flex flex-col gap-3 sm:gap-4">
         <div className="min-w-0">
-          <h2 className="text-lg sm:text-xl xl:text-2xl font-bold break-words">Email Automation</h2>
+          <h2 className="text-base sm:text-lg lg:text-xl font-bold break-words">Email Automation</h2>
           <p className="text-muted-foreground mt-1 text-sm">
             Configure automatic follow-up emails for your cold outreach
           </p>
@@ -179,110 +179,105 @@ export default function EmailSettings({
 
       {/* Tab Navigation */}
       {emailSettings?.isConnected && (
-        <div className="flex flex-wrap gap-1 p-1 bg-muted rounded-lg">
+        <div className="flex flex-wrap gap-0.5 p-1 bg-muted rounded-md">
           <button
             onClick={() => setActiveTab('settings')}
-            className={`flex items-center gap-1.5 px-2 py-1.5 rounded-md transition-all text-xs sm:text-sm ${
+            className={`flex items-center gap-1 px-1.5 py-1 rounded transition-all text-xs ${
               activeTab === 'settings'
                 ? 'bg-background text-foreground shadow-sm'
                 : 'text-muted-foreground hover:text-foreground'
             }`}
           >
-            <Settings className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-            <span className="hidden sm:inline">Settings</span>
+            <Settings className="w-3 h-3" />
+            <span className="hidden sm:inline ml-1">Settings</span>
           </button>
           <button
             onClick={() => setActiveTab('templates')}
-            className={`flex items-center gap-1.5 px-2 py-1.5 rounded-md transition-all text-xs sm:text-sm ${
+            className={`flex items-center gap-1 px-1.5 py-1 rounded transition-all text-xs ${
               activeTab === 'templates'
                 ? 'bg-background text-foreground shadow-sm'
                 : 'text-muted-foreground hover:text-foreground'
             }`}
           >
-            <Mail className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-            <span className="hidden sm:inline">Templates</span>
+            <Mail className="w-3 h-3" />
+            <span className="hidden sm:inline ml-1">Templates</span>
           </button>
           <button
             onClick={() => setActiveTab('advanced')}
-            className={`flex items-center gap-1.5 px-2 py-1.5 rounded-md transition-all text-xs sm:text-sm ${
+            className={`flex items-center gap-1 px-1.5 py-1 rounded transition-all text-xs ${
               activeTab === 'advanced'
                 ? 'bg-background text-foreground shadow-sm'
                 : 'text-muted-foreground hover:text-foreground'
             }`}
           >
-            <Settings className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-            <span className="hidden sm:inline">Advanced</span>
+            <Settings className="w-3 h-3" />
+            <span className="hidden sm:inline ml-1">Advanced</span>
           </button>
           <button
             onClick={() => setActiveTab('analytics')}
-            className={`flex items-center gap-1.5 px-2 py-1.5 rounded-md transition-all text-xs sm:text-sm ${
+            className={`flex items-center gap-1 px-1.5 py-1 rounded transition-all text-xs ${
               activeTab === 'analytics'
                 ? 'bg-background text-foreground shadow-sm'
                 : 'text-muted-foreground hover:text-foreground'
             }`}
           >
-            <BarChart3 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-            <span className="hidden sm:inline">Analytics</span>
+            <BarChart3 className="w-3 h-3" />
+            <span className="hidden sm:inline ml-1">Analytics</span>
           </button>
         </div>
       )}
 
       {/* Connection Status */}
-      <div className={`rounded-xl border p-3 sm:p-4 ${
+      <div className={`rounded-lg border p-2 sm:p-3 ${
         emailSettings?.isConnected 
           ? 'border-green-500/20 bg-green-500/5' 
           : 'border-amber-500/20 bg-amber-500/5'
       }`}>
-        <div className="flex items-start gap-3">
-          <div className={`p-2 rounded-lg shrink-0 ${
+        <div className="flex items-center gap-2">
+          <div className={`p-1.5 rounded shrink-0 ${
             emailSettings?.isConnected 
               ? 'bg-green-500/10 text-green-500' 
               : 'bg-amber-500/10 text-amber-500'
           }`}>
             {emailSettings?.isConnected ? (
-              <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5" />
+              <CheckCircle className="w-3.5 h-3.5" />
             ) : (
-              <AlertCircle className="w-4 h-4 sm:w-5 sm:h-5" />
+              <AlertCircle className="w-3.5 h-3.5" />
             )}
           </div>
           <div className="flex-1 min-w-0">
-            <h3 className="font-semibold text-sm sm:text-base break-words">
+            <h3 className="font-semibold text-xs sm:text-sm truncate">
               {emailSettings?.isConnected ? 'Email Connected' : 'Email Not Connected'}
             </h3>
-            <p className="text-xs text-muted-foreground break-words mt-1 line-clamp-2">
+            <p className="text-xs text-muted-foreground truncate mt-0.5">
               {emailSettings?.isConnected 
                 ? `Connected to ${emailSettings.email}` 
                 : 'Connect your Gmail account to enable automatic follow-ups'
               }
             </p>
-            {emailSettings?.lastSync && (
-              <p className="text-xs text-muted-foreground mt-1">
-                Last sync: {formatDate(emailSettings.lastSync)}
-              </p>
-            )}
           </div>
           {emailSettings?.isConnected && (
             <div className="flex gap-1 shrink-0">
               <button
                 onClick={handleSendTestEmail}
-                className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-all"
+                className="p-1 text-muted-foreground hover:text-foreground hover:bg-muted rounded transition-all"
                 title="Send Test Email"
               >
-                <Mail className="w-3.5 h-3.5" />
+                <Mail className="w-3 h-3" />
               </button>
               <button
                 onClick={() => setShowSettings(true)}
-                className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-all"
+                className="p-1 text-muted-foreground hover:text-foreground hover:bg-muted rounded transition-all"
                 title="Settings"
               >
-                <Settings className="w-3.5 h-3.5" />
+                <Settings className="w-3 h-3" />
               </button>
               <button
                 onClick={handleDisconnect}
-                className="p-1.5 text-red-400 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-all"
+                className="p-1 text-red-400 hover:text-red-500 hover:bg-red-500/10 rounded transition-all"
                 title="Disconnect"
               >
-                <RefreshCw className="w-3.5 h-3.5" />
+                <RefreshCw className="w-3 h-3" />
               </button>
             </div>
           )}
