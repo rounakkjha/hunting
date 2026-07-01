@@ -92,27 +92,29 @@ export default function EmailSettings({
   const sentEmails = (scheduledEmails || []).filter(e => e.sent);
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h2 className="text-2xl sm:text-3xl font-bold">Email Automation</h2>
-          <p className="text-muted-foreground mt-1">
+    <div className="max-w-4xl mx-auto space-y-6">
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+        <div className="min-w-0 flex-1">
+          <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold truncate">Email Automation</h2>
+          <p className="text-muted-foreground mt-1 text-sm sm:text-base">
             Configure automatic follow-up emails for your cold outreach
           </p>
         </div>
         {!emailSettings?.isConnected && (
-          <button
-            onClick={() => setShowSettings(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-primary to-accent text-white rounded-xl hover:shadow-lg transition-all whitespace-nowrap"
-          >
-            <Plus className="w-4 h-4" />
-            Connect Email
-          </button>
+          <div className="shrink-0">
+            <button
+              onClick={() => setShowSettings(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-primary to-accent text-white rounded-xl hover:shadow-lg transition-all whitespace-nowrap text-sm"
+            >
+              <Plus className="w-4 h-4" />
+              Connect Email
+            </button>
+          </div>
         )}
       </div>
 
       {/* Connection Status */}
-      <div className={`rounded-2xl border p-6 ${
+      <div className={`rounded-2xl border p-4 sm:p-6 ${
         emailSettings?.isConnected 
           ? 'border-green-500/20 bg-green-500/5' 
           : 'border-amber-500/20 bg-amber-500/5'
@@ -130,10 +132,10 @@ export default function EmailSettings({
             )}
           </div>
           <div className="flex-1 min-w-0">
-            <h3 className="font-semibold text-lg">
+            <h3 className="font-semibold text-base sm:text-lg">
               {emailSettings?.isConnected ? 'Email Connected' : 'Email Not Connected'}
             </h3>
-            <p className="text-sm text-muted-foreground break-words">
+            <p className="text-xs sm:text-sm text-muted-foreground break-words">
               {emailSettings?.isConnected 
                 ? `Connected to ${emailSettings.email}` 
                 : 'Connect your Gmail account to enable automatic follow-ups'
