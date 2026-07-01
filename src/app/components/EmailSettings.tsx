@@ -93,7 +93,7 @@ export default function EmailSettings({
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h2 className="text-2xl sm:text-3xl font-bold">Email Automation</h2>
           <p className="text-muted-foreground mt-1">
@@ -103,7 +103,7 @@ export default function EmailSettings({
         {!emailSettings?.isConnected && (
           <button
             onClick={() => setShowSettings(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-primary to-accent text-white rounded-xl hover:shadow-lg transition-all"
+            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-primary to-accent text-white rounded-xl hover:shadow-lg transition-all whitespace-nowrap"
           >
             <Plus className="w-4 h-4" />
             Connect Email
@@ -117,7 +117,7 @@ export default function EmailSettings({
           ? 'border-green-500/20 bg-green-500/5' 
           : 'border-amber-500/20 bg-amber-500/5'
       }`}>
-        <div className="flex items-center gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-4">
           <div className={`p-3 rounded-xl ${
             emailSettings?.isConnected 
               ? 'bg-green-500/10 text-green-500' 
@@ -129,11 +129,11 @@ export default function EmailSettings({
               <AlertCircle className="w-6 h-6" />
             )}
           </div>
-          <div className="flex-1">
+          <div className="flex-1 min-w-0">
             <h3 className="font-semibold text-lg">
               {emailSettings?.isConnected ? 'Email Connected' : 'Email Not Connected'}
             </h3>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-muted-foreground break-words">
               {emailSettings?.isConnected 
                 ? `Connected to ${emailSettings.email}` 
                 : 'Connect your Gmail account to enable automatic follow-ups'
@@ -146,7 +146,7 @@ export default function EmailSettings({
             )}
           </div>
           {emailSettings?.isConnected && (
-            <div className="flex gap-2">
+            <div className="flex gap-2 shrink-0">
               <button
                 onClick={() => setShowSettings(true)}
                 className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-all"
@@ -169,7 +169,7 @@ export default function EmailSettings({
       {/* Settings Modal */}
       {showSettings && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-          <div className="bg-card border border-border rounded-2xl p-6 max-w-md w-full max-h-[90vh] overflow-y-auto">
+          <div className="bg-card border border-border rounded-2xl p-4 sm:p-6 max-w-md w-full max-h-[90vh] overflow-y-auto">
             <h3 className="text-xl font-bold mb-4">
               {emailSettings?.isConnected ? 'Email Settings' : 'Connect Gmail'}
             </h3>
@@ -237,7 +237,7 @@ export default function EmailSettings({
               </div>
             </div>
             
-            <div className="flex gap-2 mt-6">
+            <div className="flex flex-col sm:flex-row gap-2 mt-6">
               {emailSettings?.isConnected ? (
                 <>
                   <button
