@@ -156,10 +156,10 @@ export default function EmailSettings({
   const sentEmails = (scheduledEmails || []).filter(e => e.sent);
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
-      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+    <div className="w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
+      <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4">
         <div className="min-w-0 flex-1">
-          <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold truncate">Email Automation</h2>
+          <h2 className="text-xl sm:text-2xl xl:text-3xl font-bold break-words">Email Automation</h2>
           <p className="text-muted-foreground mt-1 text-sm sm:text-base">
             Configure automatic follow-up emails for your cold outreach
           </p>
@@ -179,50 +179,50 @@ export default function EmailSettings({
 
       {/* Tab Navigation */}
       {emailSettings?.isConnected && (
-        <div className="flex gap-1 p-1 bg-muted rounded-lg">
+        <div className="flex flex-wrap gap-1 p-1 bg-muted rounded-lg">
           <button
             onClick={() => setActiveTab('settings')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-md transition-all ${
+            className={`flex items-center gap-2 px-3 py-2 rounded-md transition-all text-sm ${
               activeTab === 'settings'
                 ? 'bg-background text-foreground shadow-sm'
                 : 'text-muted-foreground hover:text-foreground'
             }`}
           >
             <Settings className="w-4 h-4" />
-            Settings
+            <span className="hidden sm:inline">Settings</span>
           </button>
           <button
             onClick={() => setActiveTab('templates')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-md transition-all ${
+            className={`flex items-center gap-2 px-3 py-2 rounded-md transition-all text-sm ${
               activeTab === 'templates'
                 ? 'bg-background text-foreground shadow-sm'
                 : 'text-muted-foreground hover:text-foreground'
             }`}
           >
             <Mail className="w-4 h-4" />
-            Templates
+            <span className="hidden sm:inline">Templates</span>
           </button>
           <button
             onClick={() => setActiveTab('advanced')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-md transition-all ${
+            className={`flex items-center gap-2 px-3 py-2 rounded-md transition-all text-sm ${
               activeTab === 'advanced'
                 ? 'bg-background text-foreground shadow-sm'
                 : 'text-muted-foreground hover:text-foreground'
             }`}
           >
             <Settings className="w-4 h-4" />
-            Advanced
+            <span className="hidden sm:inline">Advanced</span>
           </button>
           <button
             onClick={() => setActiveTab('analytics')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-md transition-all ${
+            className={`flex items-center gap-2 px-3 py-2 rounded-md transition-all text-sm ${
               activeTab === 'analytics'
                 ? 'bg-background text-foreground shadow-sm'
                 : 'text-muted-foreground hover:text-foreground'
             }`}
           >
             <BarChart3 className="w-4 h-4" />
-            Analytics
+            <span className="hidden sm:inline">Analytics</span>
           </button>
         </div>
       )}
@@ -233,8 +233,8 @@ export default function EmailSettings({
           ? 'border-green-500/20 bg-green-500/5' 
           : 'border-amber-500/20 bg-amber-500/5'
       }`}>
-        <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-          <div className={`p-3 rounded-xl ${
+        <div className="flex flex-col lg:flex-row lg:items-center gap-4">
+          <div className={`p-3 rounded-xl shrink-0 ${
             emailSettings?.isConnected 
               ? 'bg-green-500/10 text-green-500' 
               : 'bg-amber-500/10 text-amber-500'
@@ -246,10 +246,10 @@ export default function EmailSettings({
             )}
           </div>
           <div className="flex-1 min-w-0">
-            <h3 className="font-semibold text-base sm:text-lg">
+            <h3 className="font-semibold text-base sm:text-lg break-words">
               {emailSettings?.isConnected ? 'Email Connected' : 'Email Not Connected'}
             </h3>
-            <p className="text-xs sm:text-sm text-muted-foreground break-words">
+            <p className="text-xs sm:text-sm text-muted-foreground break-words mt-1">
               {emailSettings?.isConnected 
                 ? `Connected to ${emailSettings.email}` 
                 : 'Connect your Gmail account to enable automatic follow-ups'
@@ -292,7 +292,7 @@ export default function EmailSettings({
       {/* Settings Modal */}
       {showSettings && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-          <div className="bg-card border border-border rounded-2xl p-4 sm:p-6 max-w-md w-full max-h-[90vh] overflow-y-auto">
+          <div className="bg-card border border-border rounded-2xl p-4 sm:p-6 max-w-lg w-full max-h-[90vh] overflow-y-auto my-4">
             <h3 className="text-xl font-bold mb-4">
               {emailSettings?.isConnected ? 'Email Settings' : 'Connect Gmail'}
             </h3>
