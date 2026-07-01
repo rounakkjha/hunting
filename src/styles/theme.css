@@ -177,6 +177,14 @@
 }
 
 @layer utilities {
+  .force-contain {
+    min-width: 0 !important;
+    max-width: 100% !important;
+    overflow: hidden !important;
+    word-wrap: break-word !important;
+    word-break: break-word !important;
+  }
+  
   .glass {
     background: rgba(255, 255, 255, 0.05);
     backdrop-filter: blur(10px);

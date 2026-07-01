@@ -156,7 +156,7 @@ export default function EmailSettings({
   const sentEmails = (scheduledEmails || []).filter(e => e.sent);
 
   return (
-    <div className="w-full max-w-4xl mx-auto px-2 sm:px-3 lg:px-4 space-y-3 sm:space-y-4 overflow-hidden">
+    <div className="w-full max-w-4xl mx-auto px-2 sm:px-3 lg:px-4 space-y-3 sm:space-y-4 overflow-hidden min-w-0 force-contain">
       <div className="flex flex-col gap-3 sm:gap-4">
         <div className="min-w-0">
           <h2 className="text-base sm:text-lg lg:text-xl font-bold break-words">Email Automation</h2>

@@ -1305,10 +1305,10 @@ export default function Dashboard({ userData, setUserData, onLogout, currentUser
 
       <Sidebar activeSection={activeSection} setActiveSection={setActiveSection} onLogout={onLogout} onChangePassword={() => setShowChangePassword(true)} collapsed={sidebarCollapsed} onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)} mobileOpen={mobileMenuOpen} onMobileClose={() => setMobileMenuOpen(false)} currentUser={currentUser} />
 
-      <main className="flex-1 overflow-y-auto">
+      <main className="flex-1 overflow-y-auto min-w-0">
         {/* Sticky Top Bar */}
         <div className="sticky top-0 z-30 bg-background/80 backdrop-blur-xl border-b border-border/40">
-          <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-10 py-3 flex items-center gap-2 sm:gap-3 overflow-x-auto">
+          <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-10 py-3 flex items-center gap-2 sm:gap-3 overflow-x-auto min-w-0">
             <button
               onClick={() => setMobileMenuOpen(true)}
               className="md:hidden p-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-all"
@@ -1330,7 +1330,7 @@ export default function Dashboard({ userData, setUserData, onLogout, currentUser
           </div>
         </div>
 
-        <div className="max-w-[1600px] mx-auto px-3 py-4 sm:px-6 sm:py-8 lg:p-10 animate-fade-in-up" key={activeSection}>
+        <div className="max-w-[1600px] mx-auto px-3 py-4 sm:px-6 sm:py-8 lg:p-10 animate-fade-in-up min-w-0 overflow-hidden" key={activeSection}>
           {renderContent()}
         </div>
       </main>
