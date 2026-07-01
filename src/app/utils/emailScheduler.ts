@@ -67,6 +67,9 @@ export class EmailScheduler {
     const [hours, minutes] = emailSettings.scheduleTime.split(':').map(Number);
     scheduledDate.setHours(hours, minutes, 0, 0);
 
+    // Apply advanced scheduling rules
+    scheduledDate = this.calculateOptimalSendTime(scheduledDate, emailSettings);
+
     // Don't schedule if the date is in the past
     if (scheduledDate <= new Date()) {
       return existingScheduledEmails;
@@ -83,6 +86,61 @@ export class EmailScheduler {
     };
 
     return [...existingScheduledEmails, newScheduledEmail];
+  }
+
+  // Calculate optimal send time based on advanced settings
+  private calculateOptimalSendTime(baseDate: Date, emailSettings: EmailSettings): Date {
+    let scheduledTime = new Date(baseDate);
+    
+    // Apply timezone conversion
+    // For now, we'll assume the browser timezone matches the settings
+    
+    // Apply working hours restriction
+    if (emailSettings.workingHoursOnly) {
+      const [startHour, startMin] = emailSettings.workingHoursStart.split(':').map(Number);
+      const [endHour, endMin] = emailSettings.workingHoursEnd.split(':').map(Number);
+      
+      // If outside working hours, schedule for next working day
+      if (scheduledTime.getHours() < startHour || scheduledTime.getHours() > endHour) {
+        scheduledTime.setDate(scheduledTime.getDate() + 1);
+        scheduledTime.setHours(startHour, startMin, 0, 0);
+      }
+    }
+    
+    // Avoid weekends
+    if (!emailSettings.sendOnWeekends) {
+      const day = scheduledTime.getDay();
+      if (day === 0) { // Sunday
+        scheduledTime.setDate(scheduledTime.getDate() + 1);
+      } else if (day === 6) { // Saturday
+        scheduledTime.setDate(scheduledTime.getDate() + 2);
+      }
+    }
+    
+    // Avoid holidays
+    if (emailSettings.avoidHolidays) {
+      while (this.isHoliday(scheduledTime)) {
+        scheduledTime.setDate(scheduledTime.getDate() + 1);
+      }
+    }
+    
+    // Randomize timing if enabled
+    if (emailSettings.randomizeTiming) {
+      const randomMinutes = Math.floor(Math.random() * 60) - 30; // +/- 30 minutes
+      scheduledTime.setMinutes(scheduledTime.getMinutes() + randomMinutes);
+    }
+    
+    return scheduledTime;
+  }
+
+  // Check if a date is a holiday
+  private isHoliday(date: Date): boolean {
+    const holidays = [
+      '2024-01-01', '2024-07-04', '2024-12-25', // US holidays
+      '2024-12-24', '2024-12-31', // Additional common holidays
+    ];
+    const dateStr = date.toISOString().split('T')[0];
+    return holidays.includes(dateStr);
   }
 
   // Check and send scheduled emails that are due

@@ -4,6 +4,7 @@ import type { EmailSettings, ScheduledEmail } from '../App';
 import { gmailService, type GmailAuthResult } from '../utils/gmail';
 import { emailScheduler, type EmailTemplate } from '../utils/emailScheduler';
 import EmailTemplates from './EmailTemplates';
+import AdvancedEmailSettings from './AdvancedEmailSettings';
 
 interface EmailSettingsProps {
   emailSettings?: EmailSettings;
@@ -28,7 +29,7 @@ export default function EmailSettings({
     autoSendEnabled: true,
   });
   
-  const [activeTab, setActiveTab] = useState<'settings' | 'templates'>('settings');
+  const [activeTab, setActiveTab] = useState<'settings' | 'templates' | 'advanced'>('settings');
   const [templates, setTemplates] = useState<EmailTemplate[]>(() => 
     emailScheduler.getDefaultTemplates()
   );
@@ -183,6 +184,17 @@ export default function EmailSettings({
           >
             <Mail className="w-4 h-4" />
             Templates
+          </button>
+          <button
+            onClick={() => setActiveTab('advanced')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-md transition-all ${
+              activeTab === 'advanced'
+                ? 'bg-background text-foreground shadow-sm'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <Settings className="w-4 h-4" />
+            Advanced
           </button>
         </div>
       )}
@@ -481,6 +493,14 @@ export default function EmailSettings({
           onTemplateCreate={handleTemplateCreate}
           onTemplateUpdate={handleTemplateUpdate}
           onTemplateDelete={handleTemplateDelete}
+        />
+      )}
+
+      {/* Advanced Settings Tab */}
+      {emailSettings?.isConnected && activeTab === 'advanced' && emailSettings && (
+        <AdvancedEmailSettings
+          emailSettings={emailSettings}
+          onUpdateSettings={onUpdateSettings}
         />
       )}
     </div>

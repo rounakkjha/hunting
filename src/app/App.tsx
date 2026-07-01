@@ -113,6 +113,30 @@ export interface EmailSettings {
   followUpDelay: number; // days
   scheduleTime: string; // "09:00"
   lastSync?: string;
+  
+  // Advanced scheduling preferences
+  timezone: string;
+  sendOnWeekends: boolean;
+  workingHoursOnly: boolean;
+  workingHoursStart: string; // "09:00"
+  workingHoursEnd: string; // "17:00"
+  
+  // Follow-up sequence settings
+  maxFollowUps: number;
+  followUpTemplateIds: string[];
+  
+  // Smart sending preferences
+  avoidHolidays: boolean;
+  delayBetweenEmails: number; // minutes
+  randomizeTiming: boolean; // +/- 30 minutes
+  
+  // Analytics and tracking
+  trackOpens: boolean;
+  trackClicks: boolean;
+  
+  // Notification preferences
+  emailNotifications: boolean;
+  notificationEmail: string;
 }
 
 export interface ScheduledEmail {
@@ -242,6 +266,31 @@ function normalizeData(raw: any): UserData {
   if (!raw) return EMPTY_DATA;
   if (!raw.customFields) {
     raw.customFields = { applications: [], coldEmails: [], linkedInOutreach: [] };
+  }
+  
+  // Add default values for new EmailSettings fields
+  if (raw.emailSettings) {
+    raw.emailSettings = {
+      ...raw.emailSettings,
+      timezone: raw.emailSettings.timezone || 'America/New_York',
+      sendOnWeekends: raw.emailSettings.sendOnWeekends || false,
+      workingHoursOnly: raw.emailSettings.workingHoursOnly || true,
+      workingHoursStart: raw.emailSettings.workingHoursStart || '09:00',
+      workingHoursEnd: raw.emailSettings.workingHoursEnd || '17:00',
+      maxFollowUps: raw.emailSettings.maxFollowUps || 3,
+      followUpTemplateIds: raw.emailSettings.followUpTemplateIds || ['follow-up-1'],
+      avoidHolidays: raw.emailSettings.avoidHolidays || true,
+      delayBetweenEmails: raw.emailSettings.delayBetweenEmails || 30,
+      randomizeTiming: raw.emailSettings.randomizeTiming || true,
+      trackOpens: raw.emailSettings.trackOpens || false,
+      trackClicks: raw.emailSettings.trackClicks || false,
+      emailNotifications: raw.emailSettings.emailNotifications || true,
+      notificationEmail: raw.emailSettings.notificationEmail || raw.emailSettings.email,
+    };
+  }
+  
+  if (!raw.scheduledEmails) {
+    raw.scheduledEmails = [];
   }
   raw.applications = raw.applications?.map((a: any) => ({ ...a, customFields: a.customFields || {} })) || [];
   raw.coldEmails = raw.coldEmails?.map((e: any) => ({ ...e, customFields: e.customFields || {} })) || [];
