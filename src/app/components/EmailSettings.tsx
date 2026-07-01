@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
-import { Mail, Settings, Clock, CheckCircle, AlertCircle, RefreshCw, Trash2, Plus, Calendar, Bell, Loader2, BarChart3 } from 'lucide-react';
-import type { EmailSettings, ScheduledEmail } from '../App';
+import { Mail, Settings, Clock, CheckCircle, AlertCircle, RefreshCw, Plus, Calendar, Bell, Loader2, BarChart3 } from 'lucide-react';
 import { gmailService, type GmailAuthResult } from '../utils/gmail';
 import { emailScheduler, type EmailTemplate } from '../utils/emailScheduler';
 import { emailSender } from '../utils/emailSender';
 import EmailTemplates from './EmailTemplates';
 import AdvancedEmailSettings from './AdvancedEmailSettings';
 import EmailAnalytics from './EmailAnalytics';
+import type { EmailSettings, ScheduledEmail } from '../App';
 
 interface EmailSettingsProps {
   emailSettings?: EmailSettings;
@@ -17,112 +17,162 @@ interface EmailSettingsProps {
 
 export default function EmailSettings({ 
   emailSettings, 
-  scheduledEmails, 
+  scheduledEmails = [], 
   onUpdateSettings, 
   onDeleteScheduledEmail 
 }: EmailSettingsProps) {
-  const [isConnecting, setIsConnecting] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [isConnecting, setIsConnecting] = useState(false);
+  const [isDisconnecting, setIsDisconnecting] = useState(false);
+  const [activeTab, setActiveTab] = useState<'settings' | 'templates' | 'advanced' | 'analytics'>('settings');
+  const [templates, setTemplates] = useState<EmailTemplate[]>([
+    {
+      id: 'follow-up-1',
+      name: 'Standard Follow-up',
+      subject: 'Following up - {{role}} at {{company}}',
+      body: `Hi {{name}},
+
+I hope you're doing well.
+
+I wanted to follow up on my previous email regarding the {{role}} position at {{company}}. I'm very interested in this opportunity and believe my skills in [mention specific skills] would be a great fit for your team.
+
+Would you be available for a brief chat this week to discuss how I can contribute to {{company}}?
+
+Best regards,
+{{senderName}}`,
+      variables: ['name', 'company', 'role', 'senderName'],
+      createdAt: new Date().toISOString(),
+    },
+    {
+      id: 'follow-up-2',
+      name: 'Brief Follow-up',
+      subject: 'Quick follow-up - {{role}}',
+      body: `Hi {{name}},
+
+Just wanted to quickly follow up on my email about the {{role}} position at {{company}}.
+
+Is this still available? I'd love to learn more.
+
+Thanks,
+{{senderName}}`,
+      variables: ['name', 'company', 'role', 'senderName'],
+      createdAt: new Date().toISOString(),
+    },
+    {
+      id: 'follow-up-3',
+      name: 'Value-focused Follow-up',
+      subject: 'Adding value to {{company}}',
+      body: `Hi {{name}},
+
+Following up on the {{role}} opportunity at {{company}}.
+
+I've been following {{company}}'s work in [specific area] and I'm impressed by [specific achievement]. With my experience in [relevant skill], I believe I could help [specific value proposition].
+
+Would you be open to discussing how I can contribute to your team?
+
+Best,
+{{senderName}}`,
+      variables: ['name', 'company', 'role', 'senderName'],
+      createdAt: new Date().toISOString(),
+    },
+  ]);
+  const [selectedTemplateId, setSelectedTemplateId] = useState(templates[0]?.id || '');
   const [formData, setFormData] = useState({
     email: '',
     fromName: '',
+    autoSendEnabled: false,
     followUpDelay: 3,
     scheduleTime: '09:00',
-    autoSendEnabled: true,
   });
-  
-  const [activeTab, setActiveTab] = useState<'settings' | 'templates' | 'advanced' | 'analytics'>('settings');
-  const [templates, setTemplates] = useState<EmailTemplate[]>(() => 
-    emailScheduler.getDefaultTemplates()
-  );
-  const [selectedTemplateId, setSelectedTemplateId] = useState('follow-up-1');
 
   useEffect(() => {
     if (emailSettings) {
       setFormData({
-        email: emailSettings.email,
-        fromName: emailSettings.fromName,
-        followUpDelay: emailSettings.followUpDelay,
-        scheduleTime: emailSettings.scheduleTime,
-        autoSendEnabled: emailSettings.autoSendEnabled,
+        email: emailSettings.email || '',
+        fromName: emailSettings.fromName || '',
+        autoSendEnabled: emailSettings.autoSendEnabled || false,
+        followUpDelay: emailSettings.followUpDelay || 3,
+        scheduleTime: emailSettings.scheduleTime || '09:00',
       });
     }
   }, [emailSettings]);
 
-  
-
-  const handleConnectGmail = async () => {
+  const handleConnect = async () => {
     setIsConnecting(true);
     try {
-      // Store form data for after OAuth callback
-      const connectSettings = {
-        email: formData.email,
-        fromName: formData.fromName,
-        autoSendEnabled: formData.autoSendEnabled,
-        followUpDelay: formData.followUpDelay,
-        scheduleTime: formData.scheduleTime,
-      };
-      
-      // Initiate OAuth flow with popup
-      const authResult = await gmailService.initiateOAuth();
-      
-      // Create email settings with OAuth tokens
-      const newSettings: EmailSettings = {
-        id: Date.now().toString(),
-        provider: 'gmail',
-        email: authResult.email,
-        fromName: connectSettings.fromName,
-        accessToken: authResult.accessToken,
-        refreshToken: authResult.refreshToken,
-        isConnected: true,
-        autoSendEnabled: connectSettings.autoSendEnabled,
-        followUpDelay: connectSettings.followUpDelay,
-        scheduleTime: connectSettings.scheduleTime,
-        lastSync: new Date().toISOString(),
-      };
-      
-      onUpdateSettings(newSettings);
-      setShowSettings(false);
+      const result = await gmailService.authenticate();
+      if (result.success) {
+        const newSettings: EmailSettings = {
+          id: Date.now().toString(),
+          provider: 'gmail',
+          email: result.email!,
+          fromName: formData.fromName || result.email!.split('@')[0],
+          accessToken: result.accessToken,
+          refreshToken: result.refreshToken,
+          isConnected: true,
+          autoSendEnabled: formData.autoSendEnabled,
+          followUpDelay: formData.followUpDelay,
+          scheduleTime: formData.scheduleTime,
+          lastSync: new Date().toISOString(),
+        };
+        onUpdateSettings(newSettings);
+        setShowSettings(false);
+      } else {
+        alert('Failed to connect Gmail: ' + result.error);
+      }
     } catch (error) {
-      console.error('Failed to connect Gmail:', error);
-      alert('Failed to connect Gmail: ' + (error instanceof Error ? error.message : 'Unknown error'));
+      alert('Error connecting Gmail: ' + (error instanceof Error ? error.message : 'Unknown error'));
     } finally {
       setIsConnecting(false);
     }
   };
 
-  const handleDisconnect = () => {
-    if (emailSettings && confirm('Are you sure you want to disconnect your email account?')) {
-      const disconnectedSettings = { ...emailSettings, isConnected: false, accessToken: undefined, refreshToken: undefined };
-      onUpdateSettings(disconnectedSettings);
+  const handleDisconnect = async () => {
+    setIsDisconnecting(true);
+    try {
+      if (emailSettings?.refreshToken) {
+        await gmailService.revokeToken(emailSettings.refreshToken);
+      }
+      onUpdateSettings({
+        ...emailSettings!,
+        isConnected: false,
+        accessToken: undefined,
+        refreshToken: undefined,
+      });
+    } catch (error) {
+      console.error('Error disconnecting:', error);
+    } finally {
+      setIsDisconnecting(false);
     }
   };
 
-  const handleUpdateSettings = () => {
-    if (emailSettings) {
-      const updatedSettings = {
-        ...emailSettings,
-        email: formData.email,
-        fromName: formData.fromName,
-        followUpDelay: formData.followUpDelay,
-        scheduleTime: formData.scheduleTime,
-        autoSendEnabled: formData.autoSendEnabled,
-      };
-      onUpdateSettings(updatedSettings);
-    }
+  const handleSaveSettings = () => {
+    if (!emailSettings) return;
+    
+    const updatedSettings = {
+      ...emailSettings,
+      ...formData,
+    };
+    onUpdateSettings(updatedSettings);
+    setShowSettings(false);
   };
 
-  const handleTemplateCreate = (template: Omit<EmailTemplate, 'id'>) => {
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleString();
+  };
+
+  const handleTemplateCreate = (template: Omit<EmailTemplate, 'id' | 'createdAt'>) => {
     const newTemplate: EmailTemplate = {
       ...template,
       id: Date.now().toString(),
+      createdAt: new Date().toISOString(),
     };
     setTemplates([...templates, newTemplate]);
   };
 
-  const handleTemplateUpdate = (updatedTemplate: EmailTemplate) => {
+  const handleTemplateUpdate = (templateId: string, updates: Partial<EmailTemplate>) => {
     setTemplates(templates.map(t => 
-      t.id === updatedTemplate.id ? updatedTemplate : t
+      t.id === templateId ? { ...t, ...updates } : t
     ));
   };
 
@@ -148,401 +198,285 @@ export default function EmailSettings({
     }
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleString();
-  };
-
-  const pendingEmails = (scheduledEmails || []).filter(e => !e.sent);
-  const sentEmails = (scheduledEmails || []).filter(e => e.sent);
-
   return (
-    <div className="w-full max-w-4xl mx-auto px-2 sm:px-3 lg:px-4 space-y-3 sm:space-y-4 overflow-hidden min-w-0 force-contain">
-      <div className="flex flex-col gap-3 sm:gap-4">
-        <div className="min-w-0">
-          <h2 className="text-base sm:text-lg lg:text-xl font-bold break-words">Email Automation</h2>
-          <p className="text-muted-foreground mt-1 text-sm">
-            Configure automatic follow-up emails for your cold outreach
-          </p>
-        </div>
-        {!emailSettings?.isConnected && (
-          <div className="shrink-0">
-            <button
-              onClick={() => setShowSettings(true)}
-              className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-gradient-to-r from-primary to-accent text-white rounded-xl hover:shadow-lg transition-all whitespace-nowrap text-sm"
-            >
-              <Plus className="w-4 h-4" />
-              Connect Email
-            </button>
+    <div className="w-full max-w-3xl mx-auto p-4">
+      {/* Header */}
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-foreground mb-2">Email Automation</h1>
+        <p className="text-muted-foreground">Configure automatic follow-up emails for your cold outreach</p>
+      </div>
+
+      {/* Connection Status Card */}
+      <div className={`rounded-lg border p-4 mb-6 ${
+        emailSettings?.isConnected 
+          ? 'border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950' 
+          : 'border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950'
+      }`}>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className={`p-2 rounded-lg ${
+              emailSettings?.isConnected 
+                ? 'bg-green-200 text-green-800 dark:bg-green-800 dark:text-green-200' 
+                : 'bg-amber-200 text-amber-800 dark:bg-amber-800 dark:text-amber-200'
+            }`}>
+              {emailSettings?.isConnected ? (
+                <CheckCircle className="w-5 h-5" />
+              ) : (
+                <AlertCircle className="w-5 h-5" />
+              )}
+            </div>
+            <div>
+              <h3 className="font-semibold text-foreground">
+                {emailSettings?.isConnected ? 'Email Connected' : 'Email Not Connected'}
+              </h3>
+              <p className="text-sm text-muted-foreground">
+                {emailSettings?.isConnected 
+                  ? `Connected to ${emailSettings.email}` 
+                  : 'Connect your Gmail account to enable automatic follow-ups'
+                }
+              </p>
+            </div>
           </div>
-        )}
+          
+          <div className="flex items-center gap-2">
+            {emailSettings?.isConnected ? (
+              <>
+                <button
+                  onClick={handleSendTestEmail}
+                  className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors"
+                  title="Send Test Email"
+                >
+                  <Mail className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => setShowSettings(true)}
+                  className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors"
+                  title="Settings"
+                >
+                  <Settings className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={handleDisconnect}
+                  disabled={isDisconnecting}
+                  className="p-2 text-red-600 hover:text-red-700 hover:bg-red-100 dark:hover:bg-red-950 rounded-lg transition-colors disabled:opacity-50"
+                  title="Disconnect"
+                >
+                  {isDisconnecting ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <RefreshCw className="w-4 h-4" />
+                  )}
+                </button>
+              </>
+            ) : (
+              <button
+                onClick={() => setShowSettings(true)}
+                className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+              >
+                <Plus className="w-4 h-4" />
+                Connect Email
+              </button>
+            )}
+          </div>
+        </div>
       </div>
 
       {/* Tab Navigation */}
       {emailSettings?.isConnected && (
-        <div className="flex flex-wrap gap-0.5 p-1 bg-muted rounded-md">
+        <div className="flex gap-1 p-1 bg-muted rounded-lg mb-6">
           <button
             onClick={() => setActiveTab('settings')}
-            className={`flex items-center gap-1 px-1.5 py-1 rounded transition-all text-xs ${
+            className={`flex items-center gap-2 px-3 py-2 rounded-md transition-colors ${
               activeTab === 'settings'
                 ? 'bg-background text-foreground shadow-sm'
                 : 'text-muted-foreground hover:text-foreground'
             }`}
           >
-            <Settings className="w-3 h-3" />
-            <span className="hidden sm:inline ml-1">Settings</span>
+            <Settings className="w-4 h-4" />
+            Settings
           </button>
           <button
             onClick={() => setActiveTab('templates')}
-            className={`flex items-center gap-1 px-1.5 py-1 rounded transition-all text-xs ${
+            className={`flex items-center gap-2 px-3 py-2 rounded-md transition-colors ${
               activeTab === 'templates'
                 ? 'bg-background text-foreground shadow-sm'
                 : 'text-muted-foreground hover:text-foreground'
             }`}
           >
-            <Mail className="w-3 h-3" />
-            <span className="hidden sm:inline ml-1">Templates</span>
+            <Mail className="w-4 h-4" />
+            Templates
           </button>
           <button
             onClick={() => setActiveTab('advanced')}
-            className={`flex items-center gap-1 px-1.5 py-1 rounded transition-all text-xs ${
+            className={`flex items-center gap-2 px-3 py-2 rounded-md transition-colors ${
               activeTab === 'advanced'
                 ? 'bg-background text-foreground shadow-sm'
                 : 'text-muted-foreground hover:text-foreground'
             }`}
           >
-            <Settings className="w-3 h-3" />
-            <span className="hidden sm:inline ml-1">Advanced</span>
+            <Clock className="w-4 h-4" />
+            Advanced
           </button>
           <button
             onClick={() => setActiveTab('analytics')}
-            className={`flex items-center gap-1 px-1.5 py-1 rounded transition-all text-xs ${
+            className={`flex items-center gap-2 px-3 py-2 rounded-md transition-colors ${
               activeTab === 'analytics'
                 ? 'bg-background text-foreground shadow-sm'
                 : 'text-muted-foreground hover:text-foreground'
             }`}
           >
-            <BarChart3 className="w-3 h-3" />
-            <span className="hidden sm:inline ml-1">Analytics</span>
+            <BarChart3 className="w-4 h-4" />
+            Analytics
           </button>
         </div>
       )}
 
-      {/* Connection Status */}
-      <div className={`rounded-lg border p-2 sm:p-3 ${
-        emailSettings?.isConnected 
-          ? 'border-green-500/20 bg-green-500/5' 
-          : 'border-amber-500/20 bg-amber-500/5'
-      }`}>
-        <div className="flex items-center gap-2">
-          <div className={`p-1.5 rounded shrink-0 ${
-            emailSettings?.isConnected 
-              ? 'bg-green-500/10 text-green-500' 
-              : 'bg-amber-500/10 text-amber-500'
-          }`}>
-            {emailSettings?.isConnected ? (
-              <CheckCircle className="w-3.5 h-3.5" />
-            ) : (
-              <AlertCircle className="w-3.5 h-3.5" />
-            )}
-          </div>
-          <div className="flex-1 min-w-0">
-            <h3 className="font-semibold text-xs sm:text-sm truncate">
-              {emailSettings?.isConnected ? 'Email Connected' : 'Email Not Connected'}
-            </h3>
-            <p className="text-xs text-muted-foreground truncate mt-0.5">
-              {emailSettings?.isConnected 
-                ? `Connected to ${emailSettings.email}` 
-                : 'Connect your Gmail account to enable automatic follow-ups'
-              }
-            </p>
-          </div>
-          {emailSettings?.isConnected && (
-            <div className="flex gap-1 shrink-0">
-              <button
-                onClick={handleSendTestEmail}
-                className="p-1 text-muted-foreground hover:text-foreground hover:bg-muted rounded transition-all"
-                title="Send Test Email"
-              >
-                <Mail className="w-3 h-3" />
-              </button>
-              <button
-                onClick={() => setShowSettings(true)}
-                className="p-1 text-muted-foreground hover:text-foreground hover:bg-muted rounded transition-all"
-                title="Settings"
-              >
-                <Settings className="w-3 h-3" />
-              </button>
-              <button
-                onClick={handleDisconnect}
-                className="p-1 text-red-400 hover:text-red-500 hover:bg-red-500/10 rounded transition-all"
-                title="Disconnect"
-              >
-                <RefreshCw className="w-3 h-3" />
-              </button>
+      {/* Tab Content */}
+      {emailSettings?.isConnected && (
+        <div className="bg-card rounded-lg border p-6">
+          {activeTab === 'settings' && (
+            <div className="space-y-4">
+              <h2 className="text-lg font-semibold mb-4">Email Settings</h2>
+              
+              <div className="grid gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-2">From Name</label>
+                  <input
+                    type="text"
+                    value={emailSettings.fromName}
+                    onChange={(e) => onUpdateSettings({ ...emailSettings, fromName: e.target.value })}
+                    className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-primary focus:border-primary"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium mb-2">Follow-up Delay (days)</label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="30"
+                    value={emailSettings.followUpDelay}
+                    onChange={(e) => onUpdateSettings({ ...emailSettings, followUpDelay: parseInt(e.target.value) })}
+                    className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-primary focus:border-primary"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium mb-2">Schedule Time</label>
+                  <input
+                    type="time"
+                    value={emailSettings.scheduleTime}
+                    onChange={(e) => onUpdateSettings({ ...emailSettings, scheduleTime: e.target.value })}
+                    className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-primary focus:border-primary"
+                  />
+                </div>
+                
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="autoSend"
+                    checked={emailSettings.autoSendEnabled}
+                    onChange={(e) => onUpdateSettings({ ...emailSettings, autoSendEnabled: e.target.checked })}
+                    className="w-4 h-4 text-primary border rounded focus:ring-primary"
+                  />
+                  <label htmlFor="autoSend" className="text-sm font-medium">
+                    Enable automatic follow-up sending
+                  </label>
+                </div>
+              </div>
             </div>
           )}
+
+          {activeTab === 'templates' && (
+            <EmailTemplates
+              templates={templates}
+              selectedTemplateId={selectedTemplateId}
+              onTemplateSelect={setSelectedTemplateId}
+              onTemplateCreate={handleTemplateCreate}
+              onTemplateUpdate={handleTemplateUpdate}
+              onTemplateDelete={handleTemplateDelete}
+            />
+          )}
+
+          {activeTab === 'advanced' && (
+            <AdvancedEmailSettings
+              emailSettings={emailSettings}
+              onUpdateSettings={onUpdateSettings}
+            />
+          )}
+
+          {activeTab === 'analytics' && (
+            <EmailAnalytics
+              scheduledEmails={scheduledEmails}
+              onRetryEmail={(emailId) => {
+                console.log('Retry email:', emailId);
+              }}
+            />
+          )}
         </div>
-      </div>
+      )}
 
       {/* Settings Modal */}
       {showSettings && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-3 sm:p-4 z-50">
-          <div className="bg-card border border-border rounded-xl p-3 sm:p-4 max-w-md w-full max-h-[85vh] overflow-y-auto my-2 sm:my-4">
-            <h3 className="text-xl font-bold mb-4">
-              {emailSettings?.isConnected ? 'Email Settings' : 'Connect Gmail'}
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+          <div className="bg-card rounded-lg border p-6 max-w-md w-full">
+            <h3 className="text-lg font-semibold mb-4">
+              {emailSettings?.isConnected ? 'Email Settings' : 'Connect Gmail Account'}
             </h3>
             
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium mb-2">Email Address</label>
-                <input
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  className="w-full px-3 py-1.5 bg-background border border-border rounded-md focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none text-sm"
-                  placeholder="your.email@gmail.com"
-                  required
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium mb-2">Your Name</label>
-                <input
-                  type="text"
-                  value={formData.fromName}
-                  onChange={(e) => setFormData({ ...formData, fromName: e.target.value })}
-                  className="w-full px-3 py-1.5 bg-background border border-border rounded-md focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none text-sm"
-                  placeholder="John Doe"
-                  required
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium mb-2">
-                  Follow-up Delay (days)
-                </label>
-                <input
-                  type="number"
-                  min="1"
-                  max="30"
-                  value={formData.followUpDelay}
-                  onChange={(e) => setFormData({ ...formData, followUpDelay: parseInt(e.target.value) })}
-                  className="w-full px-3 py-1.5 bg-background border border-border rounded-md focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none text-sm"
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium mb-2">Schedule Time</label>
-                <input
-                  type="time"
-                  value={formData.scheduleTime}
-                  onChange={(e) => setFormData({ ...formData, scheduleTime: e.target.value })}
-                  className="w-full px-3 py-1.5 bg-background border border-border rounded-md focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none text-sm"
-                />
-              </div>
-              
-              <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  id="autoSend"
-                  checked={formData.autoSendEnabled}
-                  onChange={(e) => setFormData({ ...formData, autoSendEnabled: e.target.checked })}
-                  className="w-4 h-4 text-primary bg-background border-border rounded focus:ring-primary"
-                />
-                <label htmlFor="autoSend" className="text-sm font-medium">
-                  Enable automatic follow-up sending
-                </label>
-              </div>
-            </div>
-            
-            <div className="flex flex-col sm:flex-row gap-2 mt-6">
-              {emailSettings?.isConnected ? (
-                <>
-                  <button
-                    onClick={handleUpdateSettings}
-                    className="flex-1 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-all"
-                  >
-                    Save Settings
-                  </button>
+            {!emailSettings?.isConnected ? (
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium mb-2">Your Name</label>
+                  <input
+                    type="text"
+                    value={formData.fromName}
+                    onChange={(e) => setFormData({ ...formData, fromName: e.target.value })}
+                    className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-primary focus:border-primary"
+                    placeholder="John Doe"
+                  />
+                </div>
+                
+                <div className="flex gap-2">
                   <button
                     onClick={() => setShowSettings(false)}
-                    className="flex-1 px-4 py-2 bg-muted text-muted-foreground rounded-lg hover:bg-muted/80 transition-all"
+                    className="flex-1 px-4 py-2 border rounded-md hover:bg-muted transition-colors"
                   >
                     Cancel
                   </button>
-                </>
-              ) : (
-                <>
                   <button
-                    onClick={handleConnectGmail}
-                    disabled={isConnecting || !formData.email || !formData.fromName}
-                    className="flex-1 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    onClick={handleConnect}
+                    disabled={isConnecting || !formData.fromName}
+                    className="flex-1 px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors disabled:opacity-50"
                   >
                     {isConnecting ? (
-                      <>
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        Connecting...
-                      </>
+                      <Loader2 className="w-4 h-4 animate-spin mx-auto" />
                     ) : (
                       'Connect Gmail'
                     )}
                   </button>
-                  <button
-                    onClick={() => setShowSettings(false)}
-                    className="flex-1 px-4 py-2 bg-muted text-muted-foreground rounded-lg hover:bg-muted/80 transition-all"
-                  >
-                    Cancel
-                  </button>
-                </>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Scheduled Emails */}
-      {emailSettings?.isConnected && (
-        <div className="space-y-4">
-          <h3 className="text-xl font-bold flex items-center gap-2">
-            <Calendar className="w-5 h-5" />
-            Scheduled Emails
-          </h3>
-          
-          {/* Upcoming Emails */}
-          {(() => {
-            const upcomingEmails = emailScheduler.getUpcomingEmails(scheduledEmails || [], 24);
-            if (upcomingEmails.length === 0) return null;
-            
-            return (
-              <div>
-                <h4 className="font-medium text-blue-500 mb-2 flex items-center gap-2">
-                  <Bell className="w-4 h-4" />
-                  Next 24 Hours ({upcomingEmails.length})
-                </h4>
-                <div className="space-y-2">
-                  {upcomingEmails.map((email) => (
-                    <div key={email.id} className="flex items-center justify-between p-3 bg-blue-500/5 border border-blue-500/20 rounded-lg">
-                      <div>
-                        <p className="font-medium text-sm">Follow-up Email</p>
-                        <p className="text-xs text-muted-foreground">
-                          Scheduled for: {formatDate(email.scheduledFor)}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs text-blue-500 font-medium">Upcoming</span>
-                        <button
-                          onClick={() => onDeleteScheduledEmail(email.id)}
-                          className="p-1 text-red-400 hover:text-red-500 hover:bg-red-500/10 rounded transition-all"
-                          title="Cancel"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </div>
-                  ))}
                 </div>
               </div>
-            );
-          })()}
-          
-          {pendingEmails.length === 0 && sentEmails.length === 0 ? (
-            <div className="text-center py-12 border border-border/50 rounded-2xl">
-              <Mail className="w-12 h-12 text-muted-foreground/50 mx-auto mb-4" />
-              <p className="text-muted-foreground">No emails scheduled yet</p>
-              <p className="text-sm text-muted-foreground mt-1">
-                Follow-up emails will be scheduled automatically when you send cold emails
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {pendingEmails.length > 0 && (
-                <div>
-                  <h4 className="font-medium text-amber-500 mb-2 flex items-center gap-2">
-                    <Clock className="w-4 h-4" />
-                    Pending ({pendingEmails.length})
-                  </h4>
-                  <div className="space-y-2">
-                    {pendingEmails.map((email) => (
-                      <div key={email.id} className="flex items-center justify-between p-3 bg-amber-500/5 border border-amber-500/20 rounded-lg">
-                        <div>
-                          <p className="font-medium text-sm">Follow-up Email</p>
-                          <p className="text-xs text-muted-foreground">
-                            Scheduled for: {formatDate(email.scheduledFor)}
-                          </p>
-                        </div>
-                        <button
-                          onClick={() => onDeleteScheduledEmail(email.id)}
-                          className="p-1 text-red-400 hover:text-red-500 hover:bg-red-500/10 rounded transition-all"
-                          title="Cancel"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="p-3 bg-green-50 dark:bg-green-950 rounded-lg">
+                  <p className="text-sm text-green-800 dark:text-green-200">
+                    Connected to {emailSettings.email}
+                  </p>
                 </div>
-              )}
-              
-              {sentEmails.length > 0 && (
-                <div>
-                  <h4 className="font-medium text-green-500 mb-2 flex items-center gap-2">
-                    <CheckCircle className="w-4 h-4" />
-                    Sent ({sentEmails.length})
-                  </h4>
-                  <div className="space-y-2">
-                    {sentEmails.slice(0, 5).map((email) => (
-                      <div key={email.id} className="flex items-center justify-between p-3 bg-green-500/5 border border-green-500/20 rounded-lg">
-                        <div>
-                          <p className="font-medium text-sm">Follow-up Email</p>
-                          <p className="text-xs text-muted-foreground">
-                            Sent: {email.sentAt && formatDate(email.sentAt)}
-                          </p>
-                        </div>
-                        <CheckCircle className="w-4 h-4 text-green-500" />
-                      </div>
-                    ))}
-                    {sentEmails.length > 5 && (
-                      <p className="text-xs text-muted-foreground text-center">
-                        +{sentEmails.length - 5} more sent emails
-                      </p>
-                    )}
-                  </div>
+                
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setShowSettings(false)}
+                    className="flex-1 px-4 py-2 border rounded-md hover:bg-muted transition-colors"
+                  >
+                    Close
+                  </button>
                 </div>
-              )}
-            </div>
-          )}
+              </div>
+            )}
+          </div>
         </div>
-      )}
-
-      {/* Templates Tab */}
-      {emailSettings?.isConnected && activeTab === 'templates' && (
-        <EmailTemplates
-          templates={templates}
-          selectedTemplateId={selectedTemplateId}
-          onTemplateSelect={setSelectedTemplateId}
-          onTemplateCreate={handleTemplateCreate}
-          onTemplateUpdate={handleTemplateUpdate}
-          onTemplateDelete={handleTemplateDelete}
-        />
-      )}
-
-      {/* Advanced Settings Tab */}
-      {emailSettings?.isConnected && activeTab === 'advanced' && emailSettings && (
-        <AdvancedEmailSettings
-          emailSettings={emailSettings}
-          onUpdateSettings={onUpdateSettings}
-        />
-      )}
-
-      {/* Analytics Tab */}
-      {emailSettings?.isConnected && activeTab === 'analytics' && (
-        <EmailAnalytics
-          scheduledEmails={scheduledEmails || []}
-          onRetryEmail={(emailId) => {
-            // This would trigger a retry of the failed email
-            console.log('Retry email:', emailId);
-          }}
-        />
       )}
     </div>
   );
