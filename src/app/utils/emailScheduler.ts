@@ -1,4 +1,3 @@
-import { gmailService } from './gmail';
 import { emailSender } from './emailSender';
 import type { EmailSettings, ScheduledEmail, ColdEmail } from '../App';
 
@@ -8,6 +7,7 @@ export interface EmailTemplate {
   subject: string;
   body: string;
   variables?: string[];
+  createdAt?: string;
 }
 
 export class EmailScheduler {
@@ -22,12 +22,12 @@ export class EmailScheduler {
   }
 
   // Start the scheduler
-  start(emailSettings: EmailSettings, scheduledEmails: ScheduledEmail[], onUpdate: (emails: ScheduledEmail[]) => void) {
+  start(emailSettings: EmailSettings, scheduledEmails: ScheduledEmail[], coldEmails: ColdEmail[], onUpdate: (emails: ScheduledEmail[]) => void) {
     this.stop(); // Clear any existing interval
     
     // Check every minute for scheduled emails
     this.intervalId = setInterval(() => {
-      this.checkAndSendScheduledEmails(emailSettings, scheduledEmails, onUpdate);
+      this.checkAndSendScheduledEmails(emailSettings, scheduledEmails, coldEmails, onUpdate);
     }, 60000); // 1 minute
   }
 
@@ -61,7 +61,7 @@ export class EmailScheduler {
 
     // Calculate scheduled date
     const sentDate = new Date(coldEmail.date);
-    const scheduledDate = new Date(sentDate);
+    let scheduledDate = new Date(sentDate);
     scheduledDate.setDate(scheduledDate.getDate() + emailSettings.followUpDelay);
 
     // Set the scheduled time
@@ -148,6 +148,7 @@ export class EmailScheduler {
   private async checkAndSendScheduledEmails(
     emailSettings: EmailSettings,
     scheduledEmails: ScheduledEmail[],
+    coldEmails: ColdEmail[],
     onUpdate: (emails: ScheduledEmail[]) => void
   ) {
     if (!emailSettings.isConnected || !emailSettings.autoSendEnabled) {
@@ -165,23 +166,14 @@ export class EmailScheduler {
     }
 
     for (const scheduledEmail of dueEmails) {
-      try {
-        // Get the cold email data (this would normally come from the main app state)
-        // For now, we'll create a minimal cold email object
-        const coldEmail: ColdEmail = {
-          id: scheduledEmail.coldEmailId,
-          email: 'recipient@example.com', // This would come from the actual cold email
-          company: 'Company Name',
-          role: 'Position',
-          date: new Date().toISOString().split('T')[0],
-          status: 'sent',
-          gotResponse: false,
-          followUpDone: false,
-          isFollowUp: false,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        };
+      // Look up the real cold email from app state
+      const coldEmail = coldEmails.find(e => e.id === scheduledEmail.coldEmailId);
+      if (!coldEmail) {
+        console.warn(`Cold email not found for scheduled email ${scheduledEmail.id}, skipping`);
+        continue;
+      }
 
+      try {
         const result = await emailSender.sendScheduledEmail(scheduledEmail, emailSettings, coldEmail);
         
         // Update the email based on the result
@@ -210,25 +202,6 @@ export class EmailScheduler {
         onUpdate(updatedEmails);
       }
     }
-  }
-
-  // Send a scheduled email
-  private async sendScheduledEmail(scheduledEmail: ScheduledEmail, emailSettings: EmailSettings) {
-    // Parse the template to get recipient and content
-    const template = this.parseTemplate(scheduledEmail.template);
-    
-    if (!template.to || !template.subject || !template.body) {
-      throw new Error('Invalid email template');
-    }
-
-    // Check if access token needs refresh
-    let accessToken = emailSettings.accessToken!;
-    if (emailSettings.refreshToken && gmailService.isTokenExpired(Date.now())) {
-      accessToken = await gmailService.refreshAccessToken(emailSettings.refreshToken);
-    }
-
-    // Send the email
-    await gmailService.sendEmail(template.to, template.subject, template.body, accessToken);
   }
 
   // Generate follow-up email template

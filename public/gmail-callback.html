@@ -21,6 +21,7 @@
             border-radius: 1rem;
             box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
             max-width: 400px;
+            width: 90%;
         }
         .icon {
             width: 48px;
@@ -32,24 +33,24 @@
             align-items: center;
             justify-content: center;
         }
-        .loading {
-            animation: spin 1s linear infinite;
-        }
+        .loading { animation: spin 1s linear infinite; }
         @keyframes spin {
             from { transform: rotate(0deg); }
             to { transform: rotate(360deg); }
         }
+        .error { color: #ef4444; }
+        p { color: #64748b; font-size: 0.9rem; }
     </style>
 </head>
 <body>
     <div class="container">
-        <div class="icon loading">
+        <div class="icon loading" id="icon">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M12 2v4m0 12v4M4.93 4.93l2.83 2.83m8.48 8.48l2.83 2.83M2 12h4m12 0h4M4.93 19.07l2.83-2.83m8.48-8.48l2.83-2.83"/>
             </svg>
         </div>
-        <h2>Completing Authentication...</h2>
-        <p>Please wait while we connect your Gmail account.</p>
+        <h2 id="title">Completing Authentication...</h2>
+        <p id="message">Please wait while we connect your Gmail account.</p>
     </div>
 
     <script>
@@ -58,43 +59,81 @@
             const code = urlParams.get('code');
             const error = urlParams.get('error');
 
+            if (error) {
+                showError('Authentication was denied: ' + error);
+                sendToParent('gmail-auth-error', null, 'Authentication was denied: ' + error);
+                return;
+            }
+
+            if (!code) {
+                showError('No authorization code received.');
+                sendToParent('gmail-auth-error', null, 'No authorization code received');
+                return;
+            }
+
             try {
-                if (error) {
-                    throw new Error(`OAuth error: ${error}`);
+                // Read Supabase URL injected at build time via meta tag (or hardcoded fallback)
+                // We pass it via the opener's location origin since we can't easily access env vars here
+                const supabaseUrl = getSupabaseUrl();
+                if (!supabaseUrl) {
+                    throw new Error('Supabase URL not available in callback page');
                 }
 
-                if (!code) {
-                    throw new Error('No authorization code received');
+                const redirectUri = window.location.origin + '/gmail-callback.html';
+                const functionUrl = supabaseUrl + '/functions/v1/gmail-oauth';
+
+                const anonKey = getSupabaseAnonKey();
+                const response = await fetch(functionUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'apikey': anonKey,
+                        'Authorization': `Bearer ${anonKey}`,
+                    },
+                    body: JSON.stringify({ action: 'exchange', code, redirectUri }),
+                });
+
+                if (!response.ok) {
+                    const err = await response.json().catch(() => ({}));
+                    throw new Error(err.error || 'Token exchange failed');
                 }
 
-                // Exchange code for tokens (this would normally be done on a backend)
-                // For demo purposes, we'll simulate a successful auth
-                const authResult = {
-                    accessToken: 'demo_access_token_' + Date.now(),
-                    refreshToken: 'demo_refresh_token_' + Date.now(),
-                    email: 'user@gmail.com', // This would come from the API
-                    expiresAt: Date.now() + (3600 * 1000) // 1 hour
-                };
+                const result = await response.json();
+                sendToParent('gmail-auth-success', result, null);
 
-                // Send result to parent window
-                window.opener.postMessage({
-                    type: 'gmail-auth-success',
-                    result: authResult
-                }, window.location.origin);
-
-                window.close();
             } catch (err) {
-                // Send error to parent window
-                window.opener.postMessage({
-                    type: 'gmail-auth-error',
-                    error: err.message
-                }, window.location.origin);
-
-                window.close();
+                showError(err.message || 'Authentication failed');
+                sendToParent('gmail-auth-error', null, err.message || 'Authentication failed');
             }
         }
 
-        // Handle the callback
+        function getSupabaseUrl() {
+            try { return localStorage.getItem('supabase_url') || ''; } catch { return ''; }
+        }
+
+        function getSupabaseAnonKey() {
+            try { return localStorage.getItem('supabase_anon_key') || ''; } catch { return ''; }
+        }
+
+        function sendToParent(type, result, error) {
+            try {
+                if (window.opener) {
+                    window.opener.postMessage({ type, result, error }, window.location.origin);
+                }
+            } catch (e) {
+                console.error('Failed to send message to parent:', e);
+            }
+            setTimeout(() => window.close(), 500);
+        }
+
+        function showError(msg) {
+            document.getElementById('icon').classList.remove('loading');
+            document.getElementById('icon').style.background = '#fee2e2';
+            document.getElementById('title').textContent = 'Authentication Failed';
+            document.getElementById('title').className = 'error';
+            document.getElementById('message').textContent = msg;
+        }
+
         handleCallback();
     </script>
 </body>

@@ -35,7 +35,7 @@ export default function QuickAddModal({ type, customFields = [], knownCompanies 
         source: editingEntry.source || '',
         customSource: editingEntry.source === 'Other' ? editingEntry.source : '',
         email: editingEntry.email || '',
-        name: editingEntry.name || '',
+        name: editingEntry.contactName || editingEntry.name || '',
         location: editingEntry.location || '',
         jobUrl: editingEntry.jobUrl || '',
         jobId: editingEntry.jobId || '',
@@ -401,6 +401,16 @@ export default function QuickAddModal({ type, customFields = [], knownCompanies 
               />
             </div>
             <div className="space-y-2">
+              <label className="text-sm text-foreground/90">Contact Name</label>
+              <input
+                type="text"
+                value={formData.name || ''}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                className="w-full px-4 py-2.5 bg-background/50 rounded-lg border border-border/60 focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none transition-all"
+                placeholder="e.g., John Smith"
+              />
+            </div>
+            <div className="space-y-2">
               <label className="text-sm text-foreground/90">Email</label>
               <input
                 type="email"
@@ -419,18 +429,6 @@ export default function QuickAddModal({ type, customFields = [], knownCompanies 
                 className="w-full px-4 py-2.5 bg-background/50 rounded-lg border border-border/60 focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none transition-all"
                 placeholder="e.g., Senior Backend Engineer"
               />
-            </div>
-            <div className="flex items-center gap-3 p-4 bg-indigo-500/5 rounded-lg border border-indigo-500/20">
-              <input
-                type="checkbox"
-                id="followUp"
-                checked={formData.isFollowUp === 'true'}
-                onChange={(e) => setFormData({ ...formData, isFollowUp: e.target.checked ? 'true' : 'false' })}
-                className="w-4 h-4 rounded border-border/60 text-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/50 cursor-pointer"
-              />
-              <label htmlFor="followUp" className="text-sm text-foreground/90 cursor-pointer flex-1">
-                This is a follow-up email
-              </label>
             </div>
           </>
         );

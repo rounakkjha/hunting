@@ -1,27 +1,65 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
-import { format, addDays, isAfter, isBefore, isToday } from 'date-fns';
-import { Mail, Trash2, Reply, ChevronRight, ChevronDown, Send, MailCheck, Download, AlertCircle, CheckCircle2, Search, X, Pencil, Building2 } from 'lucide-react';
-import type { ColdEmail } from '../App';
+import { format, addDays, isAfter, isToday } from 'date-fns';
+import { Mail, Trash2, Reply, ChevronRight, ChevronDown, Send, MailCheck, AlertCircle, CheckCircle2, Search, X, Pencil, Clock, Loader2, Ban } from 'lucide-react';
+import type { ColdEmail, ScheduledEmail, EmailSettings } from '../App';
 
 interface ColdEmailsListProps {
   coldEmails: ColdEmail[];
+  scheduledEmails?: ScheduledEmail[];
+  emailSettings?: EmailSettings;
   onDelete: (id: string) => void;
   onViewDetails: (email: ColdEmail) => void;
   onToggleResponse: (id: string) => void;
   onToggleFollowUpDone?: (id: string) => void;
   onEdit?: (email: ColdEmail) => void;
+  onSendFollowUpNow?: (coldEmail: ColdEmail) => Promise<void>;
+  onCancelScheduledFollowUp?: (scheduledEmailId: string) => void;
   highlightedId?: string | null;
   groupByCompany?: boolean;
 }
 
 const PAGE_SIZE = 10;
 
-export default function ColdEmailsList({ coldEmails, onDelete, onViewDetails, onToggleResponse, onToggleFollowUpDone, onEdit, highlightedId, groupByCompany = true }: ColdEmailsListProps) {
+export default function ColdEmailsList({
+  coldEmails,
+  scheduledEmails = [],
+  emailSettings,
+  onDelete,
+  onViewDetails,
+  onToggleResponse,
+  onToggleFollowUpDone,
+  onEdit,
+  onSendFollowUpNow,
+  onCancelScheduledFollowUp,
+  highlightedId,
+  groupByCompany = true,
+}: ColdEmailsListProps) {
   const [activeTab, setActiveTab] = useState<'all' | 'initial' | 'followup'>('all');
   const [showAll, setShowAll] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedCompanies, setExpandedCompanies] = useState<Set<string>>(new Set());
+  const [sendingId, setSendingId] = useState<string | null>(null);
   const highlightRef = useRef<HTMLDivElement>(null);
+
+  // Get pending scheduled follow-up for a cold email (not yet sent, no error)
+  const getScheduledEntry = (coldEmailId: string) =>
+    scheduledEmails.find(s => s.coldEmailId === coldEmailId && !s.sent && !s.error);
+
+  const handleSendNow = async (e: React.MouseEvent, coldEmail: ColdEmail) => {
+    e.stopPropagation();
+    if (!onSendFollowUpNow || sendingId) return;
+    setSendingId(coldEmail.id);
+    try {
+      await onSendFollowUpNow(coldEmail);
+    } finally {
+      setSendingId(null);
+    }
+  };
+
+  const handleCancel = (e: React.MouseEvent, scheduledId: string) => {
+    e.stopPropagation();
+    onCancelScheduledFollowUp?.(scheduledId);
+  };
 
   useEffect(() => {
     if (highlightedId) {
@@ -289,8 +327,64 @@ export default function ColdEmailsList({ coldEmails, onDelete, onViewDetails, on
                                       );
                                     })()}
                                   </div>
+                                  {/* Follow-up action row — only for initial emails that are due/overdue */}
+                                  {!email.isFollowUp && !email.followUpDone && !email.gotResponse && emailSettings?.isConnected && (() => {
+                                    const status = getFollowUpStatus(email);
+                                    const scheduled = getScheduledEntry(email.id);
+                                    if (status.status === 'done') return null;
+
+                                    return (
+                                      <div className="flex items-center gap-2 mt-1.5" onClick={e => e.stopPropagation()}>
+                                        {scheduled ? (
+                                          // Already scheduled — show when it will send + cancel option
+                                          <>
+                                            <span className="flex items-center gap-1 px-2 py-1 bg-blue-500/10 text-blue-500 border border-blue-500/20 rounded-md text-[11px] font-semibold">
+                                              <Clock className="w-3 h-3" />
+                                              Scheduled {format(new Date(scheduled.scheduledFor), 'MMM dd, h:mm a')}
+                                            </span>
+                                            {onCancelScheduledFollowUp && (
+                                              <button
+                                                onClick={e => handleCancel(e, scheduled.id)}
+                                                className="flex items-center gap-1 px-2 py-1 text-[11px] font-semibold text-red-500 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-md hover:bg-red-100 dark:hover:bg-red-950/60 transition-all"
+                                              >
+                                                <Ban className="w-3 h-3" /> Cancel
+                                              </button>
+                                            )}
+                                            {onSendFollowUpNow && (
+                                              <button
+                                                onClick={e => handleSendNow(e, email)}
+                                                disabled={sendingId === email.id}
+                                                className="flex items-center gap-1 px-2 py-1 text-[11px] font-semibold text-white bg-primary rounded-md hover:bg-primary/90 transition-all disabled:opacity-60"
+                                              >
+                                                {sendingId === email.id
+                                                  ? <><Loader2 className="w-3 h-3 animate-spin" /> Sending...</>
+                                                  : <><Send className="w-3 h-3" /> Send Now</>}
+                                              </button>
+                                            )}
+                                          </>
+                                        ) : (status.status === 'due' || status.status === 'overdue') && onSendFollowUpNow ? (
+                                          // Due or overdue, not yet scheduled
+                                          <button
+                                            onClick={e => handleSendNow(e, email)}
+                                            disabled={sendingId === email.id}
+                                            className={`flex items-center gap-1 px-2.5 py-1 text-[11px] font-semibold text-white rounded-md transition-all disabled:opacity-60 ${
+                                              status.status === 'overdue'
+                                                ? 'bg-red-500 hover:bg-red-600'
+                                                : 'bg-amber-500 hover:bg-amber-600'
+                                            }`}
+                                          >
+                                            {sendingId === email.id
+                                              ? <><Loader2 className="w-3 h-3 animate-spin" /> Sending...</>
+                                              : <><Send className="w-3 h-3" /> Send Follow-up Now</>}
+                                          </button>
+                                        ) : null}
+                                      </div>
+                                    );
+                                  })()}
+
                                   {/* Meta row */}
-                                  <div className="flex items-center gap-2 flex-wrap">
+                                  <div className="flex items-center gap-2 flex-wrap mt-1">
+                                    {email.contactName && <span className="text-xs font-medium text-foreground/80">{email.contactName}</span>}
                                     {email.role && <span className="text-xs font-medium text-foreground/80">{email.role}</span>}
                                     {email.email && (
                                       <span className="text-[11px] text-muted-foreground px-2 py-0.5 bg-muted/50 rounded-md border border-border/40 truncate max-w-[180px]">

@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import { format } from 'date-fns';
+import { format, addDays, isAfter, isToday } from 'date-fns';
 import useNow from '../hooks/useNow';
 import {
   Plus,
@@ -48,6 +48,7 @@ import StrategyBoard from './StrategyBoard';
 import UserManagement from './UserManagement';
 import EmailSettings from './EmailSettings';
 import { emailScheduler } from '../utils/emailScheduler';
+import { emailSender } from '../utils/emailSender';
 
 interface DashboardProps {
   userData: UserData;
@@ -181,6 +182,7 @@ export default function Dashboard({ userData, setUserData, onLogout, currentUser
       emailScheduler.start(
         userData.emailSettings,
         userData.scheduledEmails,
+        userData.coldEmails,
         (updatedEmails) => {
           setUserData((prev) => ({ ...prev, scheduledEmails: updatedEmails }));
         }
@@ -190,7 +192,7 @@ export default function Dashboard({ userData, setUserData, onLogout, currentUser
     return () => {
       emailScheduler.stop();
     };
-  }, [userData.emailSettings, userData.scheduledEmails, setUserData]);
+  }, [userData.emailSettings, userData.scheduledEmails, userData.coldEmails, setUserData]);
 
   const handleSearchHighlight = (section: string, id: string) => {
     setHighlightedEntry({ section, id });
@@ -722,6 +724,8 @@ export default function Dashboard({ userData, setUserData, onLogout, currentUser
             <DateFilter dateRange={dateRange} onDateRangeChange={setDateRange} />
             <ColdEmailsList
               coldEmails={filteredData.coldEmails}
+              scheduledEmails={userData.scheduledEmails}
+              emailSettings={userData.emailSettings}
               onDelete={(id) => {
                 const email = userData.coldEmails.find((e) => e.id === id);
                 softDelete('coldEmail', id, email?.company || 'Cold Email');
@@ -746,6 +750,56 @@ export default function Dashboard({ userData, setUserData, onLogout, currentUser
               onEdit={(email) => {
                 setEditingEntry(email);
                 setActiveModal('coldEmail');
+              }}
+              onSendFollowUpNow={async (coldEmail) => {
+                if (!userData.emailSettings?.isConnected) return;
+                // Find or create a scheduled entry for this cold email
+                const existing = userData.scheduledEmails.find(
+                  s => s.coldEmailId === coldEmail.id && !s.sent && !s.error
+                );
+                const defaultTemplate = JSON.stringify({
+                  subject: `Following up - ${coldEmail.role || 'opportunity'} at ${coldEmail.company}`,
+                  body: `Hi,\n\nI wanted to follow up on my email regarding the ${coldEmail.role || 'opportunity'} position at ${coldEmail.company}.\n\nI'm still very interested and would love to connect.\n\nBest regards,\n${userData.emailSettings.fromName}`,
+                });
+                const scheduledEntry = existing || {
+                  id: Date.now().toString(),
+                  coldEmailId: coldEmail.id,
+                  userId: 'local',
+                  scheduledFor: new Date().toISOString(),
+                  template: defaultTemplate,
+                  sent: false,
+                  createdAt: new Date().toISOString(),
+                };
+                const result = await emailSender.sendScheduledEmail(
+                  scheduledEntry,
+                  userData.emailSettings,
+                  coldEmail
+                );
+                if (result.success) {
+                  setUserData(prev => ({
+                    ...prev,
+                    // Mark scheduled entry as sent (or add it as sent)
+                    scheduledEmails: existing
+                      ? prev.scheduledEmails.map(s =>
+                          s.id === existing.id
+                            ? { ...s, sent: true, sentAt: result.sentAt }
+                            : s
+                        )
+                      : [...prev.scheduledEmails, { ...scheduledEntry, sent: true, sentAt: result.sentAt }],
+                    // Mark follow-up as done on the cold email
+                    coldEmails: prev.coldEmails.map(e =>
+                      e.id === coldEmail.id ? { ...e, followUpDone: true } : e
+                    ),
+                  }));
+                } else {
+                  alert('Failed to send follow-up: ' + result.error);
+                }
+              }}
+              onCancelScheduledFollowUp={(scheduledId) => {
+                setUserData(prev => ({
+                  ...prev,
+                  scheduledEmails: prev.scheduledEmails.filter(s => s.id !== scheduledId),
+                }));
               }}
               highlightedId={highlightedEntry?.section === 'emails' ? highlightedEntry.id : null}
             />
@@ -1262,6 +1316,7 @@ export default function Dashboard({ userData, setUserData, onLogout, currentUser
             <EmailSettings
               emailSettings={userData.emailSettings}
               scheduledEmails={userData.scheduledEmails}
+              coldEmails={userData.coldEmails}
               onUpdateSettings={(settings) => {
                 setUserData((prev) => ({ ...prev, emailSettings: settings }));
               }}
@@ -1269,6 +1324,47 @@ export default function Dashboard({ userData, setUserData, onLogout, currentUser
                 setUserData((prev) => ({
                   ...prev,
                   scheduledEmails: prev.scheduledEmails.filter((e) => e.id !== id),
+                }));
+              }}
+              onSendFollowUp={async (coldEmail, template) => {
+                if (!userData.emailSettings?.isConnected) return false;
+                const scheduledEntry = {
+                  id: Date.now().toString(),
+                  coldEmailId: coldEmail.id,
+                  userId: 'local',
+                  scheduledFor: new Date().toISOString(),
+                  template: JSON.stringify({ subject: template.subject, body: template.body }),
+                  sent: false,
+                  createdAt: new Date().toISOString(),
+                };
+                const result = await emailSender.sendScheduledEmail(
+                  scheduledEntry,
+                  userData.emailSettings,
+                  coldEmail
+                );
+                if (result.success) {
+                  setUserData(prev => ({
+                    ...prev,
+                    scheduledEmails: [...prev.scheduledEmails, { ...scheduledEntry, sent: true, sentAt: result.sentAt }],
+                    coldEmails: prev.coldEmails.map(e =>
+                      e.id === coldEmail.id ? { ...e, followUpDone: true } : e
+                    ),
+                  }));
+                  return true;
+                } else {
+                  setUserData(prev => ({
+                    ...prev,
+                    scheduledEmails: [...prev.scheduledEmails, { ...scheduledEntry, error: result.error }],
+                  }));
+                  return false;
+                }
+              }}
+              onMarkFollowUpDone={(coldEmailId) => {
+                setUserData(prev => ({
+                  ...prev,
+                  coldEmails: prev.coldEmails.map(e =>
+                    e.id === coldEmailId ? { ...e, followUpDone: true } : e
+                  ),
                 }));
               }}
             />
@@ -1299,11 +1395,24 @@ export default function Dashboard({ userData, setUserData, onLogout, currentUser
     }
   };
 
+  // Compute due follow-up count for sidebar badge
+  const followUpDelay = userData.emailSettings?.followUpDelay || 3;
+  const dueFollowUpCount = userData.coldEmails.filter(email => {
+    if (email.isFollowUp || email.followUpDone || email.gotResponse || !email.email) return false;
+    const dueDate = addDays(new Date(email.date), followUpDelay);
+    return isToday(dueDate) || isAfter(new Date(), dueDate);
+  }).length;
+
+  const sidebarBadges: Record<string, number> = {};
+  if (dueFollowUpCount > 0) {
+    sidebarBadges['email-automation'] = dueFollowUpCount;
+  }
+
   return (
     <div className="flex h-screen bg-background-secondary overflow-hidden">
       <AnimatedBackground />
 
-      <Sidebar activeSection={activeSection} setActiveSection={setActiveSection} onLogout={onLogout} onChangePassword={() => setShowChangePassword(true)} collapsed={sidebarCollapsed} onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)} mobileOpen={mobileMenuOpen} onMobileClose={() => setMobileMenuOpen(false)} currentUser={currentUser} />
+      <Sidebar activeSection={activeSection} setActiveSection={setActiveSection} onLogout={onLogout} onChangePassword={() => setShowChangePassword(true)} collapsed={sidebarCollapsed} onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)} mobileOpen={mobileMenuOpen} onMobileClose={() => setMobileMenuOpen(false)} currentUser={currentUser} badgeCounts={sidebarBadges} />
 
       <main className="flex-1 overflow-y-auto min-w-0">
         {/* Sticky Top Bar */}
@@ -1380,8 +1489,15 @@ export default function Dashboard({ userData, setUserData, onLogout, currentUser
             const { customFields, ...baseData } = data;
             const processedData = { ...baseData };
 
-            if (activeModal === 'coldEmail' && processedData.isFollowUp) {
-              processedData.isFollowUp = processedData.isFollowUp === 'true';
+            if (activeModal === 'coldEmail') {
+              if (processedData.isFollowUp) {
+                processedData.isFollowUp = processedData.isFollowUp === 'true';
+              }
+              // Map form 'name' field to 'contactName' on ColdEmail
+              if (processedData.name) {
+                processedData.contactName = processedData.name;
+                delete processedData.name;
+              }
             }
             if (activeModal === 'linkedin' && processedData.isAlumni) {
               processedData.isAlumni = processedData.isAlumni === 'true';

@@ -45,9 +45,10 @@ interface SidebarProps {
   mobileOpen?: boolean;
   onMobileClose?: () => void;
   currentUser?: { role: string; username?: string } | null;
+  badgeCounts?: Record<string, number>;
 }
 
-export default function Sidebar({ activeSection, setActiveSection, onLogout, onChangePassword, collapsed, onToggleCollapse, mobileOpen, onMobileClose, currentUser }: SidebarProps) {
+export default function Sidebar({ activeSection, setActiveSection, onLogout, onChangePassword, collapsed, onToggleCollapse, mobileOpen, onMobileClose, currentUser, badgeCounts = {} }: SidebarProps) {
   const handleNavClick = (section: string) => {
     setActiveSection(section);
     onMobileClose?.();
@@ -117,17 +118,23 @@ export default function Sidebar({ activeSection, setActiveSection, onLogout, onC
               {group.items.map((item) => {
                 const Icon = item.icon;
                 const isActive = activeSection === item.id;
+                const badgeCount = badgeCounts[item.id] || 0;
                 return (
                   <div key={item.id} className="relative group/tooltip">
                     <button
                       onClick={() => handleNavClick(item.id)}
-                      className={`p-3 rounded-xl transition-all duration-200 ${
+                      className={`relative p-3 rounded-xl transition-all duration-200 ${
                         isActive
                           ? 'bg-primary text-white shadow-lg shadow-primary/30 scale-105'
                           : 'text-muted-foreground hover:text-foreground hover:bg-background/60'
                       }`}
                     >
                       <Icon className="w-5 h-5" strokeWidth={2.5} />
+                      {badgeCount > 0 && (
+                        <span className="absolute -top-0.5 -right-0.5 w-4 h-4 flex items-center justify-center bg-red-500 text-white text-[9px] font-bold rounded-full ring-2 ring-card">
+                          {badgeCount > 9 ? '9+' : badgeCount}
+                        </span>
+                      )}
                     </button>
                     {/* Tooltip */}
                     <span className="absolute left-full ml-3 top-1/2 -translate-y-1/2 px-3 py-1.5 bg-card text-foreground text-xs font-medium rounded-lg border border-border/60 shadow-xl opacity-0 group-hover/tooltip:opacity-100 transition-all pointer-events-none whitespace-nowrap z-[100]">
@@ -191,6 +198,7 @@ export default function Sidebar({ activeSection, setActiveSection, onLogout, onC
             {group.items.map((item) => {
               const Icon = item.icon;
               const isActive = activeSection === item.id;
+              const badgeCount = badgeCounts[item.id] || 0;
               return (
                 <button
                   key={item.id}
@@ -202,7 +210,16 @@ export default function Sidebar({ activeSection, setActiveSection, onLogout, onC
                   }`}
                 >
                   <Icon className="w-4.5 h-4.5" strokeWidth={2.5} />
-                  <span className="font-medium text-sm">{item.label}</span>
+                  <span className="font-medium text-sm flex-1 text-left">{item.label}</span>
+                  {badgeCount > 0 && (
+                    <span className={`min-w-[18px] h-[18px] flex items-center justify-center text-[10px] font-bold rounded-full px-1 ${
+                      isActive
+                        ? 'bg-white/25 text-white'
+                        : 'bg-red-500 text-white'
+                    }`}>
+                      {badgeCount > 9 ? '9+' : badgeCount}
+                    </span>
+                  )}
                 </button>
               );
             })}

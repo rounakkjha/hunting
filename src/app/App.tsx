@@ -40,6 +40,7 @@ export interface ColdEmail {
   company: string;
   email?: string;
   role?: string;
+  contactName?: string;
   isFollowUp?: boolean;
   gotResponse?: boolean;
   followUpDone?: boolean;
@@ -124,6 +125,7 @@ export interface EmailSettings {
   // Follow-up sequence settings
   maxFollowUps: number;
   followUpTemplateIds: string[];
+  defaultTemplateId: string;
   
   // Smart sending preferences
   avoidHolidays: boolean;
@@ -279,6 +281,7 @@ function normalizeData(raw: any): UserData {
       workingHoursEnd: raw.emailSettings.workingHoursEnd || '17:00',
       maxFollowUps: raw.emailSettings.maxFollowUps || 3,
       followUpTemplateIds: raw.emailSettings.followUpTemplateIds || ['follow-up-1'],
+      defaultTemplateId: raw.emailSettings.defaultTemplateId || 'follow-up-1',
       avoidHolidays: raw.emailSettings.avoidHolidays || true,
       delayBetweenEmails: raw.emailSettings.delayBetweenEmails || 30,
       randomizeTiming: raw.emailSettings.randomizeTiming || true,

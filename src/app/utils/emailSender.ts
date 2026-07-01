@@ -114,19 +114,19 @@ export class EmailSender {
     try {
       const template = JSON.parse(templateString);
       
-      // Extract recipient name from email
-      const recipientName = coldEmail.email?.split('@')[0] || 'there';
+      // Use contact name if available, otherwise extract from email
+      const recipientName = coldEmail.contactName || coldEmail.email?.split('@')[0] || 'there';
       
       // Replace variables
       let subject = template.subject;
       let body = template.body;
       
-      const replacements = {
+      const replacements: Record<string, string> = {
         name: recipientName,
         company: coldEmail.company,
         role: coldEmail.role || 'opportunity',
         days: Math.floor((Date.now() - new Date(coldEmail.date).getTime()) / (1000 * 60 * 60 * 24)).toString(),
-        senderName: coldEmail.fromName || 'Job Seeker',
+        senderName: (coldEmail as any).fromName || 'Job Seeker',
       };
 
       Object.entries(replacements).forEach(([key, value]) => {
