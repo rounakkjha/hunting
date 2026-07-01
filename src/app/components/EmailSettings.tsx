@@ -156,11 +156,11 @@ export default function EmailSettings({
   const sentEmails = (scheduledEmails || []).filter(e => e.sent);
 
   return (
-    <div className="w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
-      <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4">
-        <div className="min-w-0 flex-1">
-          <h2 className="text-xl sm:text-2xl xl:text-3xl font-bold break-words">Email Automation</h2>
-          <p className="text-muted-foreground mt-1 text-sm sm:text-base">
+    <div className="w-full max-w-5xl mx-auto px-3 sm:px-4 lg:px-6 space-y-4 sm:space-y-6 overflow-x-hidden">
+      <div className="flex flex-col gap-3 sm:gap-4">
+        <div className="min-w-0">
+          <h2 className="text-lg sm:text-xl xl:text-2xl font-bold break-words">Email Automation</h2>
+          <p className="text-muted-foreground mt-1 text-sm">
             Configure automatic follow-up emails for your cold outreach
           </p>
         </div>
@@ -168,7 +168,7 @@ export default function EmailSettings({
           <div className="shrink-0">
             <button
               onClick={() => setShowSettings(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-primary to-accent text-white rounded-xl hover:shadow-lg transition-all whitespace-nowrap text-sm"
+              className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-gradient-to-r from-primary to-accent text-white rounded-xl hover:shadow-lg transition-all whitespace-nowrap text-sm"
             >
               <Plus className="w-4 h-4" />
               Connect Email
@@ -182,74 +182,74 @@ export default function EmailSettings({
         <div className="flex flex-wrap gap-1 p-1 bg-muted rounded-lg">
           <button
             onClick={() => setActiveTab('settings')}
-            className={`flex items-center gap-2 px-3 py-2 rounded-md transition-all text-sm ${
+            className={`flex items-center gap-1.5 px-2 py-1.5 rounded-md transition-all text-xs sm:text-sm ${
               activeTab === 'settings'
                 ? 'bg-background text-foreground shadow-sm'
                 : 'text-muted-foreground hover:text-foreground'
             }`}
           >
-            <Settings className="w-4 h-4" />
+            <Settings className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             <span className="hidden sm:inline">Settings</span>
           </button>
           <button
             onClick={() => setActiveTab('templates')}
-            className={`flex items-center gap-2 px-3 py-2 rounded-md transition-all text-sm ${
+            className={`flex items-center gap-1.5 px-2 py-1.5 rounded-md transition-all text-xs sm:text-sm ${
               activeTab === 'templates'
                 ? 'bg-background text-foreground shadow-sm'
                 : 'text-muted-foreground hover:text-foreground'
             }`}
           >
-            <Mail className="w-4 h-4" />
+            <Mail className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             <span className="hidden sm:inline">Templates</span>
           </button>
           <button
             onClick={() => setActiveTab('advanced')}
-            className={`flex items-center gap-2 px-3 py-2 rounded-md transition-all text-sm ${
+            className={`flex items-center gap-1.5 px-2 py-1.5 rounded-md transition-all text-xs sm:text-sm ${
               activeTab === 'advanced'
                 ? 'bg-background text-foreground shadow-sm'
                 : 'text-muted-foreground hover:text-foreground'
             }`}
           >
-            <Settings className="w-4 h-4" />
+            <Settings className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             <span className="hidden sm:inline">Advanced</span>
           </button>
           <button
             onClick={() => setActiveTab('analytics')}
-            className={`flex items-center gap-2 px-3 py-2 rounded-md transition-all text-sm ${
+            className={`flex items-center gap-1.5 px-2 py-1.5 rounded-md transition-all text-xs sm:text-sm ${
               activeTab === 'analytics'
                 ? 'bg-background text-foreground shadow-sm'
                 : 'text-muted-foreground hover:text-foreground'
             }`}
           >
-            <BarChart3 className="w-4 h-4" />
+            <BarChart3 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             <span className="hidden sm:inline">Analytics</span>
           </button>
         </div>
       )}
 
       {/* Connection Status */}
-      <div className={`rounded-2xl border p-4 sm:p-6 ${
+      <div className={`rounded-xl border p-3 sm:p-4 ${
         emailSettings?.isConnected 
           ? 'border-green-500/20 bg-green-500/5' 
           : 'border-amber-500/20 bg-amber-500/5'
       }`}>
-        <div className="flex flex-col lg:flex-row lg:items-center gap-4">
-          <div className={`p-3 rounded-xl shrink-0 ${
+        <div className="flex items-start gap-3">
+          <div className={`p-2 rounded-lg shrink-0 ${
             emailSettings?.isConnected 
               ? 'bg-green-500/10 text-green-500' 
               : 'bg-amber-500/10 text-amber-500'
           }`}>
             {emailSettings?.isConnected ? (
-              <CheckCircle className="w-6 h-6" />
+              <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5" />
             ) : (
-              <AlertCircle className="w-6 h-6" />
+              <AlertCircle className="w-4 h-4 sm:w-5 sm:h-5" />
             )}
           </div>
           <div className="flex-1 min-w-0">
-            <h3 className="font-semibold text-base sm:text-lg break-words">
+            <h3 className="font-semibold text-sm sm:text-base break-words">
               {emailSettings?.isConnected ? 'Email Connected' : 'Email Not Connected'}
             </h3>
-            <p className="text-xs sm:text-sm text-muted-foreground break-words mt-1">
+            <p className="text-xs text-muted-foreground break-words mt-1 line-clamp-2">
               {emailSettings?.isConnected 
                 ? `Connected to ${emailSettings.email}` 
                 : 'Connect your Gmail account to enable automatic follow-ups'
@@ -262,27 +262,27 @@ export default function EmailSettings({
             )}
           </div>
           {emailSettings?.isConnected && (
-            <div className="flex gap-2 shrink-0">
+            <div className="flex gap-1 shrink-0">
               <button
                 onClick={handleSendTestEmail}
-                className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-all"
+                className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-all"
                 title="Send Test Email"
               >
-                <Mail className="w-4 h-4" />
+                <Mail className="w-3.5 h-3.5" />
               </button>
               <button
                 onClick={() => setShowSettings(true)}
-                className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-all"
+                className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-all"
                 title="Settings"
               >
-                <Settings className="w-4 h-4" />
+                <Settings className="w-3.5 h-3.5" />
               </button>
               <button
                 onClick={handleDisconnect}
-                className="p-2 text-red-400 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-all"
+                className="p-1.5 text-red-400 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-all"
                 title="Disconnect"
               >
-                <RefreshCw className="w-4 h-4" />
+                <RefreshCw className="w-3.5 h-3.5" />
               </button>
             </div>
           )}
@@ -291,8 +291,8 @@ export default function EmailSettings({
 
       {/* Settings Modal */}
       {showSettings && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-          <div className="bg-card border border-border rounded-2xl p-4 sm:p-6 max-w-lg w-full max-h-[90vh] overflow-y-auto my-4">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-3 sm:p-4 z-50">
+          <div className="bg-card border border-border rounded-xl p-3 sm:p-4 max-w-md w-full max-h-[85vh] overflow-y-auto my-2 sm:my-4">
             <h3 className="text-xl font-bold mb-4">
               {emailSettings?.isConnected ? 'Email Settings' : 'Connect Gmail'}
             </h3>
@@ -304,7 +304,7 @@ export default function EmailSettings({
                   type="email"
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  className="w-full px-4 py-2 bg-background border border-border rounded-lg focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none"
+                  className="w-full px-3 py-1.5 bg-background border border-border rounded-md focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none text-sm"
                   placeholder="your.email@gmail.com"
                   required
                 />
@@ -316,7 +316,7 @@ export default function EmailSettings({
                   type="text"
                   value={formData.fromName}
                   onChange={(e) => setFormData({ ...formData, fromName: e.target.value })}
-                  className="w-full px-4 py-2 bg-background border border-border rounded-lg focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none"
+                  className="w-full px-3 py-1.5 bg-background border border-border rounded-md focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none text-sm"
                   placeholder="John Doe"
                   required
                 />
@@ -332,7 +332,7 @@ export default function EmailSettings({
                   max="30"
                   value={formData.followUpDelay}
                   onChange={(e) => setFormData({ ...formData, followUpDelay: parseInt(e.target.value) })}
-                  className="w-full px-4 py-2 bg-background border border-border rounded-lg focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none"
+                  className="w-full px-3 py-1.5 bg-background border border-border rounded-md focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none text-sm"
                 />
               </div>
               
@@ -342,7 +342,7 @@ export default function EmailSettings({
                   type="time"
                   value={formData.scheduleTime}
                   onChange={(e) => setFormData({ ...formData, scheduleTime: e.target.value })}
-                  className="w-full px-4 py-2 bg-background border border-border rounded-lg focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none"
+                  className="w-full px-3 py-1.5 bg-background border border-border rounded-md focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none text-sm"
                 />
               </div>
               
