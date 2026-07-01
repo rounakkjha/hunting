@@ -20,6 +20,7 @@ import {
   Briefcase,
   Key,
   FileSearch,
+  Settings,
 } from 'lucide-react';
 import ThemeToggle from './ThemeToggle';
 
@@ -84,6 +85,7 @@ export default function Sidebar({ activeSection, setActiveSection, onLogout, onC
       title: 'More',
       items: [
         { id: 'analytics', icon: BarChart3, label: 'Analytics' },
+        { id: 'email-automation', icon: Settings, label: 'Email Automation' },
         { id: 'matcher', icon: FileSearch, label: 'Resume Matcher' },
         ...(isSuperAdmin ? [{ id: 'users', icon: Users, label: 'User Management' }] : []),
         { id: 'trash', icon: Trash2, label: 'Trash' },

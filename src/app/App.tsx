@@ -101,6 +101,32 @@ export interface User {
   createdAt: string;
 }
 
+export interface EmailSettings {
+  id: string;
+  provider: 'gmail';
+  email: string;
+  fromName: string;
+  accessToken?: string;
+  refreshToken?: string;
+  isConnected: boolean;
+  autoSendEnabled: boolean;
+  followUpDelay: number; // days
+  scheduleTime: string; // "09:00"
+  lastSync?: string;
+}
+
+export interface ScheduledEmail {
+  id: string;
+  coldEmailId: string;
+  userId: string;
+  scheduledFor: string;
+  template: string;
+  sent: boolean;
+  sentAt?: string;
+  error?: string;
+  createdAt: string;
+}
+
 export interface ContentItem {
   id: string;
   date: string;
@@ -187,6 +213,8 @@ export interface UserData {
     coldEmails: CustomField[];
     linkedInOutreach: CustomField[];
   };
+  emailSettings?: EmailSettings;
+  scheduledEmails: ScheduledEmail[];
 }
 
 const EMPTY_DATA: UserData = {
@@ -207,6 +235,7 @@ const EMPTY_DATA: UserData = {
     coldEmails: [],
     linkedInOutreach: [],
   },
+  scheduledEmails: [],
 };
 
 function normalizeData(raw: any): UserData {

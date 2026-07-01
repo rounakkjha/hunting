@@ -22,7 +22,7 @@ import {
   BarChart3,
   CheckCircle,
 } from 'lucide-react';
-import type { UserData, JobApplication, ColdEmail, LinkedInOutreach, CustomField, TrashItem, TrashItemType, User, Interview, InterviewStatus, InterviewRoundStatus, ReferralStatus } from '../App';
+import type { UserData, JobApplication, ColdEmail, LinkedInOutreach, CustomField, TrashItem, TrashItemType, User, Interview, InterviewStatus, InterviewRoundStatus, ReferralStatus, EmailSettings } from '../App';
 import { updateUserPassword } from '../utils/auth';
 import Sidebar from './Sidebar';
 import TimeGreeting from './TimeGreeting';
@@ -46,6 +46,7 @@ import TrashBin from './TrashBin';
 import { useToast } from './Toast';
 import StrategyBoard from './StrategyBoard';
 import UserManagement from './UserManagement';
+import EmailSettings from './EmailSettings';
 
 interface DashboardProps {
   userData: UserData;
@@ -1235,6 +1236,23 @@ export default function Dashboard({ userData, setUserData, onLogout, currentUser
             <DateFilter dateRange={dateRange} onDateRangeChange={setDateRange} />
             <AdvancedStats userData={filteredData} dateRange={dateRange} />
           </div>
+        );
+
+      case 'email-automation':
+        return (
+          <EmailSettings
+            emailSettings={userData.emailSettings}
+            scheduledEmails={userData.scheduledEmails}
+            onUpdateSettings={(settings) => {
+              setUserData((prev) => ({ ...prev, emailSettings: settings }));
+            }}
+            onDeleteScheduledEmail={(id) => {
+              setUserData((prev) => ({
+                ...prev,
+                scheduledEmails: prev.scheduledEmails.filter((e) => e.id !== id),
+              }));
+            }}
+          />
         );
 
       case 'users':
