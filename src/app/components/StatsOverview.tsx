@@ -19,9 +19,14 @@ interface Stat {
 }
 
 export default function StatsOverview({ userData, onNavigate, isLoading }: StatsOverviewProps) {
-  const initialEmails = userData.coldEmails.filter((e) => !e.isFollowUp).length;
-  const followUpEmails = userData.coldEmails.filter((e) => e.isFollowUp).length;
-  const followUpsDone = userData.coldEmails.filter((e) => e.followUpDone).length;
+  // Cold emails = initial (non-follow-up) entries in coldEmails list
+  const coldEmailCount = userData.coldEmails.filter((e) => !e.isFollowUp).length;
+  // Follow-ups sent = manually logged follow-ups + automation-sent scheduled emails
+  const manualFollowUps = userData.coldEmails.filter((e) => e.isFollowUp).length;
+  const automationFollowUpsSent = (userData.scheduledEmails || []).filter((s) => s.sent).length;
+  const totalFollowUpsSent = manualFollowUps + automationFollowUpsSent;
+  // Total emails = cold emails + all follow-ups sent
+  const totalEmails = coldEmailCount + totalFollowUpsSent;
 
   const totalApplied = userData.applications.length;
 
@@ -66,12 +71,12 @@ export default function StatsOverview({ userData, onNavigate, isLoading }: Stats
       section: 'applications',
     },
     {
-      label: 'Cold Emails',
-      value: userData.coldEmails.length,
+      label: 'Emails',
+      value: totalEmails,
       icon: Mail,
       color: 'from-indigo-400 to-indigo-500',
       textColor: 'text-indigo-400',
-      subtitle: `${initialEmails} initial, ${followUpsDone}/${followUpEmails} follow-ups done`,
+      subtitle: `${coldEmailCount} cold, ${totalFollowUpsSent} follow-ups sent`,
       gradient: 'from-indigo-400/10 to-indigo-500/5',
       section: 'emails',
     },

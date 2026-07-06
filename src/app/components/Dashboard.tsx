@@ -307,6 +307,7 @@ export default function Dashboard({ userData, setUserData, onLogout, currentUser
       targetCompanies: userData.targetCompanies.filter((t) => t.date >= start && t.date <= end),
       contentLibrary: userData.contentLibrary,
       todos: todosWithCarryForward.filter((t: any) => t.date >= start && t.date <= end),
+      scheduledEmails: (userData.scheduledEmails || []).filter((s) => { const d = (s.sentAt || s.createdAt)?.slice(0, 10) || ''; return d >= start && d <= end; }),
     };
   }, [userData, dateRange, todosWithCarryForward]);
 
