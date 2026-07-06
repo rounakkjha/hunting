@@ -207,6 +207,20 @@ export default function InterviewList({ interviews, onAdd, onOpenAddModal, onEdi
                                 <p className="mt-1 text-xs text-muted-foreground">{round.notes}</p>
                               )}
                             </div>
+                            {interview.status !== 'rejected' && interview.status !== 'offered' && interview.status !== 'accepted' && interview.status !== 'declined' && (
+                              <div className="flex items-center gap-1 shrink-0">
+                                <select
+                                  value={round.status}
+                                  onChange={(e) => onUpdateRound(interview.id, round.id, { status: e.target.value as InterviewRoundStatus })}
+                                  className="text-[11px] font-medium px-2 py-1 rounded-md border border-border/60 bg-background focus:ring-2 focus:ring-primary/30 outline-none"
+                                >
+                                  <option value="pending">Pending</option>
+                                  <option value="scheduled">Scheduled</option>
+                                  <option value="selected">Selected</option>
+                                  <option value="rejected">Rejected</option>
+                                </select>
+                              </div>
+                            )}
                           </div>
                         </div>
                       );

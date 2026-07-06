@@ -127,11 +127,16 @@ export default function QuickAddModal({ type, customFields = [], knownCompanies 
     }
     if (type === 'interview') {
       payload.rounds = rounds;
-      payload.status = 'active';
       payload.sources = {};
       if (editingEntry) {
         payload.id = editingEntry.id;
         payload.createdAt = editingEntry.createdAt;
+        // If any round is rejected, the whole interview is rejected
+        const anyRejected = rounds.some((r) => r.status === 'rejected');
+        payload.status = anyRejected ? 'rejected' : (editingEntry.status || 'active');
+      } else {
+        const anyRejected = rounds.some((r) => r.status === 'rejected');
+        payload.status = anyRejected ? 'rejected' : 'active';
       }
     }
 
