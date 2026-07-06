@@ -235,6 +235,7 @@ export interface UserData {
   trash: TrashItem[];
   ignoredTargetSuggestions: string[];
   knownCompanies: string[];
+  knownSources: string[];
   customFields: {
     applications: CustomField[];
     coldEmails: CustomField[];
@@ -258,6 +259,7 @@ const EMPTY_DATA: UserData = {
   trash: [],
   ignoredTargetSuggestions: [],
   knownCompanies: [],
+  knownSources: [],
   customFields: {
     applications: [],
     coldEmails: [],
@@ -321,6 +323,7 @@ function normalizeData(raw: any): UserData {
   });
   raw.ignoredTargetSuggestions = raw.ignoredTargetSuggestions || [];
   raw.knownCompanies = raw.knownCompanies || [];
+  raw.knownSources = raw.knownSources || [];
   raw.trash = (raw.trash || []).filter((t: any) => {
     const deletedAt = new Date(t.deletedAt).getTime();
     const sevenDays = 7 * 24 * 60 * 60 * 1000;

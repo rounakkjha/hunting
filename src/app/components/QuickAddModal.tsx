@@ -8,6 +8,7 @@ interface QuickAddModalProps {
   type: 'application' | 'coldEmail' | 'linkedin' | 'content' | 'interview';
   customFields?: CustomField[];
   knownCompanies?: string[];
+  knownSources?: string[];
   onClose: () => void;
   onAdd: (data: any) => void;
   onAddKnownCompany?: (company: string) => void;
@@ -15,7 +16,9 @@ interface QuickAddModalProps {
   existingEntries?: any[];
 }
 
-export default function QuickAddModal({ type, customFields = [], knownCompanies = [], onClose, onAdd, onAddKnownCompany, editingEntry, existingEntries = [] }: QuickAddModalProps) {
+const DEFAULT_APPLICATION_SOURCES = ['LinkedIn', 'Naukri', 'Referral', 'Other'];
+
+export default function QuickAddModal({ type, customFields = [], knownCompanies = [], knownSources = [], onClose, onAdd, onAddKnownCompany, editingEntry, existingEntries = [] }: QuickAddModalProps) {
   const [formData, setFormData] = useState<Record<string, string>>({});
   const [customFieldsData, setCustomFieldsData] = useState<Record<string, any>>({});
   const [resumeFile, setResumeFile] = useState<{ name: string; data: string } | null>(null);
@@ -32,8 +35,8 @@ export default function QuickAddModal({ type, customFields = [], knownCompanies 
         date: editingEntry.date || format(new Date(), 'yyyy-MM-dd'),
         company: editingEntry.company || '',
         role: editingEntry.role || '',
-        source: editingEntry.source || '',
-        customSource: editingEntry.source === 'Other' ? editingEntry.source : '',
+        source: DEFAULT_APPLICATION_SOURCES.includes(editingEntry.source || '') ? (editingEntry.source || '') : 'Other',
+        customSource: DEFAULT_APPLICATION_SOURCES.includes(editingEntry.source || '') ? '' : (editingEntry.source || ''),
         email: editingEntry.email || '',
         name: editingEntry.contactName || editingEntry.name || '',
         location: editingEntry.location || '',
@@ -258,10 +261,16 @@ export default function QuickAddModal({ type, customFields = [], knownCompanies 
                 className="w-full px-4 py-2.5 bg-background/50 rounded-lg border border-border/60 focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none transition-all"
               >
                 <option value="">Select source...</option>
-                <option value="LinkedIn">LinkedIn</option>
-                <option value="Naukri">Naukri</option>
-                <option value="Referral">Referral</option>
-                <option value="Other">Other</option>
+                {DEFAULT_APPLICATION_SOURCES.map((source) => (
+                  <option key={source} value={source}>{source}</option>
+                ))}
+                {knownSources.length > 0 && (
+                  <optgroup label="Custom Sources">
+                    {knownSources.map((source) => (
+                      <option key={source} value={source}>{source}</option>
+                    ))}
+                  </optgroup>
+                )}
               </select>
               {formData.source === 'Other' && (
                 <input

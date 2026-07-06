@@ -1472,6 +1472,7 @@ export default function Dashboard({ userData, setUserData, onLogout, currentUser
               : []
           }
           knownCompanies={userData.knownCompanies || []}
+          knownSources={userData.knownSources || []}
           editingEntry={editingEntry}
           existingEntries={
             activeModal === 'application' ? userData.applications :
@@ -1503,6 +1504,39 @@ export default function Dashboard({ userData, setUserData, onLogout, currentUser
             }
             const { customFields, ...baseData } = data;
             const processedData = { ...baseData };
+
+            // Promote frequently-used custom application sources to the dropdown
+            if (activeModal === 'application' && processedData.source) {
+              const DEFAULT_APP_SOURCES = ['LinkedIn', 'Naukri', 'Referral', 'Other'];
+              const projectedApplications = editingEntry
+                ? userData.applications.map((a: any) =>
+                    a.id === editingEntry.id ? { ...a, source: processedData.source } : a
+                  )
+                : [...userData.applications, { ...processedData, id: 'new' }];
+
+              const sourceCounts = projectedApplications.reduce((acc: Record<string, number>, app: any) => {
+                const s = app.source?.trim();
+                if (!s) return acc;
+                const lower = s.toLowerCase();
+                acc[lower] = (acc[lower] || 0) + 1;
+                return acc;
+              }, {});
+
+              const sourcesToAdd = Object.entries(sourceCounts)
+                .filter(([source, count]) => {
+                  if (count < 3) return false;
+                  return !DEFAULT_APP_SOURCES.some((ds) => ds.toLowerCase() === source);
+                })
+                .map(([source]) => source)
+                .filter((source) => !(userData.knownSources || []).some((ks) => ks.toLowerCase() === source));
+
+              if (sourcesToAdd.length > 0) {
+                setUserData((prev) => ({
+                  ...prev,
+                  knownSources: [...(prev.knownSources || []), ...sourcesToAdd],
+                }));
+              }
+            }
 
             if (activeModal === 'coldEmail') {
               if (processedData.isFollowUp) {
