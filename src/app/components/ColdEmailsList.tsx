@@ -14,6 +14,7 @@ interface ColdEmailsListProps {
   onEdit?: (email: ColdEmail) => void;
   onSendFollowUpNow?: (coldEmail: ColdEmail) => Promise<void>;
   onCancelScheduledFollowUp?: (scheduledEmailId: string) => void;
+  onScheduleFollowUp?: (coldEmail: ColdEmail) => void;
   highlightedId?: string | null;
   groupByCompany?: boolean;
 }
@@ -31,6 +32,7 @@ export default function ColdEmailsList({
   onEdit,
   onSendFollowUpNow,
   onCancelScheduledFollowUp,
+  onScheduleFollowUp,
   highlightedId,
   groupByCompany = true,
 }: ColdEmailsListProps) {
@@ -39,6 +41,7 @@ export default function ColdEmailsList({
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedCompanies, setExpandedCompanies] = useState<Set<string>>(new Set());
   const [sendingId, setSendingId] = useState<string | null>(null);
+  const [schedulingId, setSchedulingId] = useState<string | null>(null);
   const highlightRef = useRef<HTMLDivElement>(null);
 
   // Get pending scheduled follow-up for a cold email (not yet sent, no error)
@@ -59,6 +62,17 @@ export default function ColdEmailsList({
   const handleCancel = (e: React.MouseEvent, scheduledId: string) => {
     e.stopPropagation();
     onCancelScheduledFollowUp?.(scheduledId);
+  };
+
+  const handleSchedule = async (e: React.MouseEvent, coldEmail: ColdEmail) => {
+    e.stopPropagation();
+    if (!onScheduleFollowUp || schedulingId) return;
+    setSchedulingId(coldEmail.id);
+    try {
+      onScheduleFollowUp(coldEmail);
+    } finally {
+      setSchedulingId(null);
+    }
   };
 
   useEffect(() => {
@@ -377,7 +391,20 @@ export default function ColdEmailsList({
                                               ? <><Loader2 className="w-3 h-3 animate-spin" /> Sending...</>
                                               : <><Send className="w-3 h-3" /> Send Follow-up Now</>}
                                           </button>
-                                        ) : null}
+                                        ) : (
+                                          // Not yet due or canceled — allow scheduling
+                                          onScheduleFollowUp && emailSettings?.isConnected && (
+                                            <button
+                                              onClick={e => handleSchedule(e, email)}
+                                              disabled={schedulingId === email.id}
+                                              className="flex items-center gap-1 px-2.5 py-1 text-[11px] font-semibold text-white bg-blue-500 hover:bg-blue-600 rounded-md transition-all disabled:opacity-60"
+                                            >
+                                              {schedulingId === email.id
+                                                ? <><Loader2 className="w-3 h-3 animate-spin" /> Scheduling...</>
+                                                : <><Clock className="w-3 h-3" /> Schedule Mail</>}
+                                            </button>
+                                          )
+                                        )}
                                       </div>
                                     );
                                   })()}

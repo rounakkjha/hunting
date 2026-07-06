@@ -801,6 +801,17 @@ export default function Dashboard({ userData, setUserData, onLogout, currentUser
                   scheduledEmails: prev.scheduledEmails.filter(s => s.id !== scheduledId),
                 }));
               }}
+              onScheduleFollowUp={(coldEmail) => {
+                if (!userData.emailSettings?.isConnected) return;
+                setUserData(prev => ({
+                  ...prev,
+                  scheduledEmails: emailScheduler.scheduleFollowUp(
+                    coldEmail,
+                    prev.emailSettings!,
+                    prev.scheduledEmails
+                  ),
+                }));
+              }}
               highlightedId={highlightedEntry?.section === 'emails' ? highlightedEntry.id : null}
             />
           </div>
@@ -1317,8 +1328,12 @@ export default function Dashboard({ userData, setUserData, onLogout, currentUser
               emailSettings={userData.emailSettings}
               scheduledEmails={userData.scheduledEmails}
               coldEmails={userData.coldEmails}
+              emailTemplates={userData.emailTemplates}
               onUpdateSettings={(settings) => {
                 setUserData((prev) => ({ ...prev, emailSettings: settings }));
+              }}
+              onUpdateTemplates={(templates) => {
+                setUserData((prev) => ({ ...prev, emailTemplates: templates }));
               }}
               onDeleteScheduledEmail={(id) => {
                 setUserData((prev) => ({

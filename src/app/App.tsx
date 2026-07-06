@@ -4,6 +4,7 @@ import Login from './components/Login';
 import { ToastProvider } from './components/Toast';
 import { loadFromBackend, saveToBackend } from './utils/api';
 import { loginUser, checkUserExists } from './utils/auth';
+import { emailScheduler, type EmailTemplate } from './utils/emailScheduler';
 
 export interface CustomField {
   id: string;
@@ -240,6 +241,7 @@ export interface UserData {
     linkedInOutreach: CustomField[];
   };
   emailSettings?: EmailSettings;
+  emailTemplates: EmailTemplate[];
   scheduledEmails: ScheduledEmail[];
 }
 
@@ -261,6 +263,7 @@ const EMPTY_DATA: UserData = {
     coldEmails: [],
     linkedInOutreach: [],
   },
+  emailTemplates: emailScheduler.getDefaultTemplates(),
   scheduledEmails: [],
 };
 
@@ -294,6 +297,9 @@ function normalizeData(raw: any): UserData {
   
   if (!raw.scheduledEmails) {
     raw.scheduledEmails = [];
+  }
+  if (!raw.emailTemplates || raw.emailTemplates.length === 0) {
+    raw.emailTemplates = emailScheduler.getDefaultTemplates();
   }
   raw.applications = raw.applications?.map((a: any) => ({ ...a, customFields: a.customFields || {} })) || [];
   raw.coldEmails = raw.coldEmails?.map((e: any) => ({ ...e, customFields: e.customFields || {} })) || [];

@@ -17,7 +17,9 @@ interface EmailSettingsProps {
   emailSettings?: EmailSettings;
   scheduledEmails?: ScheduledEmail[];
   coldEmails?: ColdEmail[];
+  emailTemplates?: EmailTemplate[];
   onUpdateSettings: (settings: EmailSettings) => void;
+  onUpdateTemplates: (templates: EmailTemplate[]) => void;
   onDeleteScheduledEmail: (id: string) => void;
   onSendFollowUp?: (coldEmail: ColdEmail, template: EmailTemplate) => Promise<boolean>;
   onMarkFollowUpDone?: (coldEmailId: string) => void;
@@ -79,7 +81,9 @@ export default function EmailSettingsComponent({
   emailSettings,
   scheduledEmails = [],
   coldEmails = [],
+  emailTemplates = DEFAULT_TEMPLATES,
   onUpdateSettings,
+  onUpdateTemplates,
   onDeleteScheduledEmail,
   onSendFollowUp,
   onMarkFollowUpDone,
@@ -91,8 +95,13 @@ export default function EmailSettingsComponent({
   const [sendingTest, setSendingTest] = useState(false);
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
 
-  const [templates, setTemplates] = useState<EmailTemplate[]>(DEFAULT_TEMPLATES);
-  const [selectedTemplateId, setSelectedTemplateId] = useState(DEFAULT_TEMPLATES[0].id);
+  const [templates, setTemplates] = useState<EmailTemplate[]>(emailTemplates);
+  const [selectedTemplateId, setSelectedTemplateId] = useState(emailTemplates[0]?.id || DEFAULT_TEMPLATES[0].id);
+
+  // Sync with persisted templates
+  useEffect(() => {
+    setTemplates(emailTemplates);
+  }, [emailTemplates]);
 
   // Per-row template overrides: coldEmailId -> templateId
   const [templateOverrides, setTemplateOverrides] = useState<Record<string, string>>({});
@@ -209,16 +218,22 @@ export default function EmailSettingsComponent({
   // ── Templates ────────────────────────────────────────────────────────────────
   const handleTemplateCreate = (template: Omit<EmailTemplate, 'id' | 'createdAt'>) => {
     const newTemplate: EmailTemplate = { ...template, id: Date.now().toString(), createdAt: new Date().toISOString() };
-    setTemplates([...templates, newTemplate]);
+    const next = [...templates, newTemplate];
+    setTemplates(next);
+    onUpdateTemplates(next);
   };
 
   const handleTemplateUpdate = (updated: EmailTemplate) => {
-    setTemplates(templates.map(t => t.id === updated.id ? updated : t));
+    const next = templates.map(t => t.id === updated.id ? updated : t);
+    setTemplates(next);
+    onUpdateTemplates(next);
   };
 
   const handleTemplateDelete = (templateId: string) => {
-    setTemplates(templates.filter(t => t.id !== templateId));
-    if (selectedTemplateId === templateId) setSelectedTemplateId(templates[0]?.id || '');
+    const next = templates.filter(t => t.id !== templateId);
+    setTemplates(next);
+    onUpdateTemplates(next);
+    if (selectedTemplateId === templateId) setSelectedTemplateId(next[0]?.id || '');
   };
 
   const handleSetDefault = (templateId: string) => {
