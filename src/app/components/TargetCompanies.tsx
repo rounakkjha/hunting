@@ -149,9 +149,14 @@ export default function TargetCompanies({
     e.preventDefault();
     if (!newCompany.trim() || !newRole.trim() || !newJobUrl.trim()) return;
 
-    // Check for duplicate
-    const isDuplicate = companies.some(c => 
-      c.company?.toLowerCase() === newCompany.trim().toLowerCase()
+    // Check for exact duplicate — all fields must match to be considered duplicate
+    const trimmedCompany = newCompany.trim().toLowerCase();
+    const trimmedRole = newRole.trim().toLowerCase();
+    const trimmedJobUrl = newJobUrl.trim().toLowerCase();
+    const isDuplicate = companies.some(c =>
+      c.company?.toLowerCase() === trimmedCompany &&
+      (c.role || '').toLowerCase() === trimmedRole &&
+      (c.jobUrl || '').toLowerCase() === trimmedJobUrl
     );
 
     if (isDuplicate) {
@@ -784,8 +789,12 @@ export default function TargetCompanies({
 
       {/* Duplicate Warning Dialog */}
       {showDuplicateWarning && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[60] animate-fade-in">
-          <div className="bg-card rounded-2xl border border-border/60 shadow-2xl w-full max-w-md p-6 animate-scale-in">
+        <div
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[60] animate-fade-in"
+          onClick={() => { setShowDuplicateWarning(false); setPendingCompany(null); }}
+          onKeyDown={(e) => { if (e.key === 'Escape') { setShowDuplicateWarning(false); setPendingCompany(null); } }}
+        >
+          <div className="bg-card rounded-2xl border border-border/60 shadow-2xl w-full max-w-md p-6 animate-scale-in" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center gap-3 mb-4">
               <div className="p-2 bg-amber-500/10 rounded-lg">
                 <AlertCircle className="w-5 h-5 text-amber-500" strokeWidth={2.5} />
@@ -793,7 +802,7 @@ export default function TargetCompanies({
               <h3 className="text-lg font-semibold">Duplicate Company Detected</h3>
             </div>
             <p className="text-sm text-muted-foreground mb-6">
-              A company with this name already exists. Do you want to continue adding it?
+              An identical entry (same company, role, and job URL) already exists. Do you want to add it anyway?
             </p>
             <div className="flex gap-3">
               <button
@@ -807,8 +816,12 @@ export default function TargetCompanies({
               </button>
               <button
                 onClick={() => {
-                  if (pendingCompany) {
-                    onAdd(pendingCompany.company, pendingCompany.role, pendingCompany.date, pendingCompany.jobUrl, pendingCompany.referralStatus);
+                  try {
+                    if (pendingCompany) {
+                      onAdd(pendingCompany.company, pendingCompany.role, pendingCompany.date, pendingCompany.jobUrl, pendingCompany.referralStatus);
+                    }
+                  } catch (err) {
+                    console.error('Failed to add company:', err);
                   }
                   setShowDuplicateWarning(false);
                   setPendingCompany(null);

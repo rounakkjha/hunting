@@ -86,30 +86,38 @@ export default function QuickAddModal({ type, customFields = [], knownCompanies 
 
     switch (type) {
       case 'application':
-        // Same company + same role = duplicate — require both to be non-empty
+        // Same company + same role + same source = exact duplicate
+        if (!data.company?.trim() || !data.role?.trim()) return false;
+        return existingEntries.some((e: any) =>
+          e.company?.trim() && e.role?.trim() &&
+          e.company.toLowerCase() === data.company.toLowerCase() &&
+          e.role.toLowerCase() === data.role.toLowerCase() &&
+          (e.source || '').toLowerCase() === (data.source || '').toLowerCase()
+        );
+      case 'coldEmail':
+        // Same company + same email + same role = exact duplicate
+        if (!data.company?.trim()) return false;
+        return existingEntries.some((e: any) =>
+          e.company?.trim() &&
+          e.company.toLowerCase() === data.company.toLowerCase() &&
+          (e.email || '').toLowerCase() === (data.email || '').toLowerCase() &&
+          (e.role || '').toLowerCase() === (data.role || '').toLowerCase()
+        );
+      case 'linkedin':
+        // Same name + same company = exact duplicate
+        if (!data.name?.trim()) return false;
+        return existingEntries.some((e: any) =>
+          e.name?.trim() &&
+          e.name.toLowerCase() === data.name.toLowerCase() &&
+          (e.company || '').toLowerCase() === (data.company || '').toLowerCase()
+        );
+      case 'interview':
+        // Same company + same role = duplicate
         if (!data.company?.trim() || !data.role?.trim()) return false;
         return existingEntries.some((e: any) =>
           e.company?.trim() && e.role?.trim() &&
           e.company.toLowerCase() === data.company.toLowerCase() &&
           e.role.toLowerCase() === data.role.toLowerCase()
-        );
-      case 'coldEmail':
-        // Check by person name only — skip if name is empty
-        if (!data.name?.trim()) return false;
-        return existingEntries.some((e: any) =>
-          e.name?.trim() && e.name.toLowerCase() === data.name.toLowerCase()
-        );
-      case 'linkedin':
-        // Check by person name only — skip if name is empty
-        if (!data.name?.trim()) return false;
-        return existingEntries.some((e: any) =>
-          e.name?.trim() && e.name.toLowerCase() === data.name.toLowerCase()
-        );
-      case 'interview':
-        // Same company + same role = duplicate
-        return existingEntries.some((e: any) =>
-          e.company?.toLowerCase() === data.company?.toLowerCase() &&
-          e.role?.toLowerCase() === data.role?.toLowerCase()
         );
       default:
         return false;
@@ -775,8 +783,12 @@ export default function QuickAddModal({ type, customFields = [], knownCompanies 
 
     {/* Duplicate Warning Dialog */}
     {showDuplicateWarning && (
-      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[60] animate-fade-in">
-        <div className="bg-card rounded-2xl border border-border/60 shadow-2xl w-full max-w-md p-6 animate-scale-in">
+      <div
+        className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[60] animate-fade-in"
+        onClick={() => { setShowDuplicateWarning(false); setPendingSubmit(null); }}
+        onKeyDown={(e) => { if (e.key === 'Escape') { setShowDuplicateWarning(false); setPendingSubmit(null); } }}
+      >
+        <div className="bg-card rounded-2xl border border-border/60 shadow-2xl w-full max-w-md p-6 animate-scale-in" onClick={(e) => e.stopPropagation()}>
           <div className="flex items-center gap-3 mb-4">
             <div className="p-2 bg-amber-500/10 rounded-lg">
               <AlertCircle className="w-5 h-5 text-amber-500" strokeWidth={2.5} />
@@ -784,10 +796,10 @@ export default function QuickAddModal({ type, customFields = [], knownCompanies 
             <h3 className="text-lg font-semibold">Duplicate Entry Detected</h3>
           </div>
           <p className="text-sm text-muted-foreground mb-2">
-            {type === 'application' && 'An application for this company and role already exists.'}
+            {type === 'application' && 'An identical application (same company, role, and source) already exists.'}
             {type === 'interview' && 'An interview for this company and role already exists.'}
-            {type === 'coldEmail' && `You've already emailed ${pendingSubmit?.name || 'this person'}.`}
-            {type === 'linkedin' && `You're already connected with ${pendingSubmit?.name || 'this person'}.`}
+            {type === 'coldEmail' && 'An identical cold email (same company, email, and role) already exists.'}
+            {type === 'linkedin' && `An identical outreach to ${pendingSubmit?.name || 'this person'} at the same company already exists.`}
           </p>
           <p className="text-sm text-muted-foreground/70 mb-6">
             Do you want to continue adding this entry?
@@ -804,8 +816,12 @@ export default function QuickAddModal({ type, customFields = [], knownCompanies 
             </button>
             <button
               onClick={() => {
-                if (pendingSubmit) {
-                  onAdd(pendingSubmit);
+                try {
+                  if (pendingSubmit) {
+                    onAdd(pendingSubmit);
+                  }
+                } catch (err) {
+                  console.error('Failed to add entry:', err);
                 }
                 setShowDuplicateWarning(false);
                 setPendingSubmit(null);
