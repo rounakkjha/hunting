@@ -1,3 +1,4 @@
+import { gmailService } from './gmail';
 import { emailSender } from './emailSender';
 import type { EmailSettings, ScheduledEmail, ColdEmail } from '../App';
 
@@ -7,7 +8,6 @@ export interface EmailTemplate {
   subject: string;
   body: string;
   variables?: string[];
-  createdAt?: string;
 }
 
 export class EmailScheduler {
@@ -22,12 +22,12 @@ export class EmailScheduler {
   }
 
   // Start the scheduler
-  start(emailSettings: EmailSettings, scheduledEmails: ScheduledEmail[], coldEmails: ColdEmail[], onUpdate: (emails: ScheduledEmail[]) => void) {
+  start(emailSettings: EmailSettings, scheduledEmails: ScheduledEmail[], onUpdate: (emails: ScheduledEmail[]) => void) {
     this.stop(); // Clear any existing interval
     
     // Check every minute for scheduled emails
     this.intervalId = setInterval(() => {
-      this.checkAndSendScheduledEmails(emailSettings, scheduledEmails, coldEmails, onUpdate);
+      this.checkAndSendScheduledEmails(emailSettings, scheduledEmails, onUpdate);
     }, 60000); // 1 minute
   }
 
@@ -148,7 +148,6 @@ export class EmailScheduler {
   private async checkAndSendScheduledEmails(
     emailSettings: EmailSettings,
     scheduledEmails: ScheduledEmail[],
-    coldEmails: ColdEmail[],
     onUpdate: (emails: ScheduledEmail[]) => void
   ) {
     if (!emailSettings.isConnected || !emailSettings.autoSendEnabled) {
@@ -166,25 +165,13 @@ export class EmailScheduler {
     }
 
     for (const scheduledEmail of dueEmails) {
-      // Look up the real cold email from app state
-      const coldEmail = coldEmails.find(e => e.id === scheduledEmail.coldEmailId);
-      if (!coldEmail) {
-        console.warn(`Cold email not found for scheduled email ${scheduledEmail.id}, skipping`);
-        continue;
-      }
-
       try {
-        const result = await emailSender.sendScheduledEmail(scheduledEmail, emailSettings, coldEmail);
+        await this.sendScheduledEmail(scheduledEmail, emailSettings);
         
-        // Update the email based on the result
+        // Update the email as sent
         const updatedEmails = scheduledEmails.map(email =>
           email.id === scheduledEmail.id
-            ? { 
-                ...email, 
-                sent: result.success, 
-                sentAt: result.success ? result.sentAt : undefined,
-                error: result.success ? undefined : result.error
-              }
+            ? { ...email, sent: true, sentAt: new Date().toISOString() }
             : email
         );
         
@@ -202,6 +189,25 @@ export class EmailScheduler {
         onUpdate(updatedEmails);
       }
     }
+  }
+
+  // Send a scheduled email
+  private async sendScheduledEmail(scheduledEmail: ScheduledEmail, emailSettings: EmailSettings) {
+    // Parse the template to get recipient and content
+    const template = this.parseTemplate(scheduledEmail.template);
+    
+    if (!template.to || !template.subject || !template.body) {
+      throw new Error('Invalid email template');
+    }
+
+    // Check if access token needs refresh
+    let accessToken = emailSettings.accessToken!;
+    if (emailSettings.refreshToken && gmailService.isTokenExpired(Date.now())) {
+      accessToken = await gmailService.refreshAccessToken(emailSettings.refreshToken);
+    }
+
+    // Send the email
+    await gmailService.sendEmail(template.to, template.subject, template.body, accessToken);
   }
 
   // Generate follow-up email template

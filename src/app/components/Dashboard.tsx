@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import { format, addDays, isAfter, isToday } from 'date-fns';
+import { format } from 'date-fns';
 import useNow from '../hooks/useNow';
 import {
   Plus,
@@ -48,7 +48,6 @@ import StrategyBoard from './StrategyBoard';
 import UserManagement from './UserManagement';
 import EmailSettings from './EmailSettings';
 import { emailScheduler } from '../utils/emailScheduler';
-import { emailSender } from '../utils/emailSender';
 
 interface DashboardProps {
   userData: UserData;
@@ -182,7 +181,6 @@ export default function Dashboard({ userData, setUserData, onLogout, currentUser
       emailScheduler.start(
         userData.emailSettings,
         userData.scheduledEmails,
-        userData.coldEmails,
         (updatedEmails) => {
           setUserData((prev) => ({ ...prev, scheduledEmails: updatedEmails }));
         }
@@ -192,7 +190,7 @@ export default function Dashboard({ userData, setUserData, onLogout, currentUser
     return () => {
       emailScheduler.stop();
     };
-  }, [userData.emailSettings, userData.scheduledEmails, userData.coldEmails, setUserData]);
+  }, [userData.emailSettings, userData.scheduledEmails, setUserData]);
 
   const handleSearchHighlight = (section: string, id: string) => {
     setHighlightedEntry({ section, id });
@@ -307,7 +305,6 @@ export default function Dashboard({ userData, setUserData, onLogout, currentUser
       targetCompanies: userData.targetCompanies.filter((t) => t.date >= start && t.date <= end),
       contentLibrary: userData.contentLibrary,
       todos: todosWithCarryForward.filter((t: any) => t.date >= start && t.date <= end),
-      scheduledEmails: (userData.scheduledEmails || []).filter((s) => { const d = (s.sentAt || s.createdAt)?.slice(0, 10) || ''; return d >= start && d <= end; }),
     };
   }, [userData, dateRange, todosWithCarryForward]);
 
@@ -754,7 +751,6 @@ export default function Dashboard({ userData, setUserData, onLogout, currentUser
               }}
               onSendFollowUpNow={async (coldEmail) => {
                 if (!userData.emailSettings?.isConnected) return;
-                // Find or create a scheduled entry for this cold email
                 const existing = userData.scheduledEmails.find(
                   s => s.coldEmailId === coldEmail.id && !s.sent && !s.error
                 );
@@ -771,23 +767,26 @@ export default function Dashboard({ userData, setUserData, onLogout, currentUser
                   sent: false,
                   createdAt: new Date().toISOString(),
                 };
+                const resumeOverride =
+                  userData.emailSettings.attachResumeToFollowUps &&
+                  userData.emailSettings.defaultResumeData &&
+                  userData.emailSettings.defaultResumeName
+                    ? { name: userData.emailSettings.defaultResumeName, data: userData.emailSettings.defaultResumeData }
+                    : undefined;
                 const result = await emailSender.sendScheduledEmail(
                   scheduledEntry,
                   userData.emailSettings,
-                  coldEmail
+                  coldEmail,
+                  resumeOverride
                 );
                 if (result.success) {
                   setUserData(prev => ({
                     ...prev,
-                    // Mark scheduled entry as sent (or add it as sent)
                     scheduledEmails: existing
                       ? prev.scheduledEmails.map(s =>
-                          s.id === existing.id
-                            ? { ...s, sent: true, sentAt: result.sentAt }
-                            : s
+                          s.id === existing.id ? { ...s, sent: true, sentAt: result.sentAt } : s
                         )
                       : [...prev.scheduledEmails, { ...scheduledEntry, sent: true, sentAt: result.sentAt }],
-                    // Mark follow-up as done on the cold email
                     coldEmails: prev.coldEmails.map(e =>
                       e.id === coldEmail.id ? { ...e, followUpDone: true } : e
                     ),
@@ -1353,10 +1352,18 @@ export default function Dashboard({ userData, setUserData, onLogout, currentUser
                   sent: false,
                   createdAt: new Date().toISOString(),
                 };
+                // Attach resume: use the one on the cold email, or the default from settings
+                const resumeOverride =
+                  userData.emailSettings.attachResumeToFollowUps &&
+                  userData.emailSettings.defaultResumeData &&
+                  userData.emailSettings.defaultResumeName
+                    ? { name: userData.emailSettings.defaultResumeName, data: userData.emailSettings.defaultResumeData }
+                    : undefined;
                 const result = await emailSender.sendScheduledEmail(
                   scheduledEntry,
                   userData.emailSettings,
-                  coldEmail
+                  coldEmail,
+                  resumeOverride
                 );
                 if (result.success) {
                   setUserData(prev => ({
@@ -1411,24 +1418,11 @@ export default function Dashboard({ userData, setUserData, onLogout, currentUser
     }
   };
 
-  // Compute due follow-up count for sidebar badge
-  const followUpDelay = userData.emailSettings?.followUpDelay || 3;
-  const dueFollowUpCount = userData.coldEmails.filter(email => {
-    if (email.isFollowUp || email.followUpDone || email.gotResponse || !email.email) return false;
-    const dueDate = addDays(new Date(email.date), followUpDelay);
-    return isToday(dueDate) || isAfter(new Date(), dueDate);
-  }).length;
-
-  const sidebarBadges: Record<string, number> = {};
-  if (dueFollowUpCount > 0) {
-    sidebarBadges['email-automation'] = dueFollowUpCount;
-  }
-
   return (
     <div className="flex h-screen bg-background-secondary overflow-hidden">
       <AnimatedBackground />
 
-      <Sidebar activeSection={activeSection} setActiveSection={setActiveSection} onLogout={onLogout} onChangePassword={() => setShowChangePassword(true)} collapsed={sidebarCollapsed} onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)} mobileOpen={mobileMenuOpen} onMobileClose={() => setMobileMenuOpen(false)} currentUser={currentUser} badgeCounts={sidebarBadges} />
+      <Sidebar activeSection={activeSection} setActiveSection={setActiveSection} onLogout={onLogout} onChangePassword={() => setShowChangePassword(true)} collapsed={sidebarCollapsed} onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)} mobileOpen={mobileMenuOpen} onMobileClose={() => setMobileMenuOpen(false)} currentUser={currentUser} />
 
       <main className="flex-1 overflow-y-auto min-w-0">
         {/* Sticky Top Bar */}
@@ -1473,7 +1467,6 @@ export default function Dashboard({ userData, setUserData, onLogout, currentUser
               : []
           }
           knownCompanies={userData.knownCompanies || []}
-          knownSources={userData.knownSources || []}
           editingEntry={editingEntry}
           existingEntries={
             activeModal === 'application' ? userData.applications :
@@ -1506,48 +1499,8 @@ export default function Dashboard({ userData, setUserData, onLogout, currentUser
             const { customFields, ...baseData } = data;
             const processedData = { ...baseData };
 
-            // Promote frequently-used custom application sources to the dropdown
-            if (activeModal === 'application' && processedData.source) {
-              const DEFAULT_APP_SOURCES = ['LinkedIn', 'Naukri', 'Referral', 'Other'];
-              const projectedApplications = editingEntry
-                ? userData.applications.map((a: any) =>
-                    a.id === editingEntry.id ? { ...a, source: processedData.source } : a
-                  )
-                : [...userData.applications, { ...processedData, id: 'new' }];
-
-              const sourceCounts = projectedApplications.reduce((acc: Record<string, number>, app: any) => {
-                const s = app.source?.trim();
-                if (!s) return acc;
-                const lower = s.toLowerCase();
-                acc[lower] = (acc[lower] || 0) + 1;
-                return acc;
-              }, {});
-
-              const sourcesToAdd = Object.entries(sourceCounts)
-                .filter(([source, count]) => {
-                  if (count < 3) return false;
-                  return !DEFAULT_APP_SOURCES.some((ds) => ds.toLowerCase() === source);
-                })
-                .map(([source]) => source)
-                .filter((source) => !(userData.knownSources || []).some((ks) => ks.toLowerCase() === source));
-
-              if (sourcesToAdd.length > 0) {
-                setUserData((prev) => ({
-                  ...prev,
-                  knownSources: [...(prev.knownSources || []), ...sourcesToAdd],
-                }));
-              }
-            }
-
-            if (activeModal === 'coldEmail') {
-              if (processedData.isFollowUp) {
-                processedData.isFollowUp = processedData.isFollowUp === 'true';
-              }
-              // Map form 'name' field to 'contactName' on ColdEmail
-              if (processedData.name) {
-                processedData.contactName = processedData.name;
-                delete processedData.name;
-              }
+            if (activeModal === 'coldEmail' && processedData.isFollowUp) {
+              processedData.isFollowUp = processedData.isFollowUp === 'true';
             }
             if (activeModal === 'linkedin' && processedData.isAlumni) {
               processedData.isAlumni = processedData.isAlumni === 'true';

@@ -5,7 +5,7 @@ import {
   Mail, Settings, Clock, CheckCircle, AlertCircle,
   Plus, Loader2, Trash2, X, Star,
   Send, Calendar, User, Ban, Info,
-  CheckSquare, Square,
+  CheckSquare, Square, Paperclip,
 } from 'lucide-react';
 import { gmailService } from '../utils/gmail';
 import { emailScheduler, type EmailTemplate } from '../utils/emailScheduler';
@@ -947,6 +947,70 @@ export default function EmailSettingsComponent({
                       <option key={t.id} value={t.id}>{t.name}</option>
                     ))}
                   </select>
+                </div>
+
+                {/* Resume attachment for follow-ups */}
+                <div className="space-y-2">
+                  <label className="flex items-center gap-2 text-sm font-semibold">
+                    <Paperclip className="w-4 h-4 text-primary" /> Resume attachment
+                  </label>
+                  <label className="flex items-center gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={emailSettings?.attachResumeToFollowUps ?? false}
+                      onChange={(e) => {
+                        if (!emailSettings) return;
+                        onUpdateSettings({ ...emailSettings, attachResumeToFollowUps: e.target.checked });
+                      }}
+                      className="w-4 h-4 accent-primary"
+                    />
+                    <span className="text-sm text-muted-foreground">Attach resume to every follow-up email</span>
+                  </label>
+                  {emailSettings?.attachResumeToFollowUps && (
+                    <div className="mt-2">
+                      {emailSettings.defaultResumeName ? (
+                        <div className="flex items-center gap-3 p-3 bg-primary/5 border border-primary/20 rounded-xl">
+                          <Paperclip className="w-4 h-4 text-primary shrink-0" />
+                          <span className="flex-1 text-sm font-medium truncate">{emailSettings.defaultResumeName}</span>
+                          <button
+                            type="button"
+                            onClick={() => onUpdateSettings({ ...emailSettings, defaultResumeData: undefined, defaultResumeName: undefined })}
+                            className="text-muted-foreground hover:text-destructive transition-colors"
+                            title="Remove resume"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ) : (
+                        <label className="flex items-center gap-3 p-3 border-2 border-dashed border-border/60 rounded-xl cursor-pointer hover:border-primary/50 transition-colors">
+                          <Paperclip className="w-4 h-4 text-muted-foreground" />
+                          <span className="text-sm text-muted-foreground">Upload default resume (PDF, DOC, DOCX)</span>
+                          <input
+                            type="file"
+                            accept=".pdf,.doc,.docx"
+                            className="hidden"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (!file || !emailSettings) return;
+                              const reader = new FileReader();
+                              reader.onload = (ev) => {
+                                const dataUrl = ev.target?.result as string;
+                                onUpdateSettings({
+                                  ...emailSettings,
+                                  defaultResumeData: dataUrl,
+                                  defaultResumeName: file.name,
+                                });
+                              };
+                              reader.readAsDataURL(file);
+                            }}
+                          />
+                        </label>
+                      )}
+                      <p className="text-[11px] text-muted-foreground mt-1.5">
+                        This resume will be attached when no resume is linked to the cold email entry.
+                      </p>
+                    </div>
+                  )}
                 </div>
 
                 <button

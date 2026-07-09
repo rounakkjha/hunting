@@ -2,6 +2,11 @@ import { gmailService } from './gmail';
 import { emailScheduler } from './emailScheduler';
 import type { EmailSettings, ScheduledEmail, ColdEmail } from '../App';
 
+export interface ResumeAttachment {
+  name: string;
+  data: string; // base64 data URL
+}
+
 export interface EmailSendResult {
   success: boolean;
   messageId?: string;
@@ -35,7 +40,8 @@ export class EmailSender {
   async sendScheduledEmail(
     scheduledEmail: ScheduledEmail,
     emailSettings: EmailSettings,
-    coldEmail: ColdEmail
+    coldEmail: ColdEmail,
+    resumeOverride?: ResumeAttachment // optional: used when coldEmail has no resume but user set a default
   ): Promise<EmailSendResult> {
     // Prevent duplicate sends
     if (this.sendingInProgress.has(scheduledEmail.id)) {
@@ -69,12 +75,19 @@ export class EmailSender {
         emailSettings
       );
 
+      // Determine resume attachment: prefer the one on the cold email entry, fall back to the override
+      const attachment: { name: string; data: string } | undefined =
+        (coldEmail.resumeData && coldEmail.resumeName)
+          ? { name: coldEmail.resumeName, data: coldEmail.resumeData }
+          : resumeOverride;
+
       // Send the email via Gmail API
       const messageId = await gmailService.sendEmail(
         emailContent.to,
         emailContent.subject,
         finalBody,
-        accessToken
+        accessToken,
+        attachment
       );
 
       const result: EmailSendResult = {

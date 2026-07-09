@@ -4,7 +4,6 @@ import Login from './components/Login';
 import { ToastProvider } from './components/Toast';
 import { loadFromBackend, saveToBackend } from './utils/api';
 import { loginUser, checkUserExists } from './utils/auth';
-import { emailScheduler, type EmailTemplate } from './utils/emailScheduler';
 
 export interface CustomField {
   id: string;
@@ -41,7 +40,6 @@ export interface ColdEmail {
   company: string;
   email?: string;
   role?: string;
-  contactName?: string;
   isFollowUp?: boolean;
   gotResponse?: boolean;
   followUpDone?: boolean;
@@ -126,7 +124,6 @@ export interface EmailSettings {
   // Follow-up sequence settings
   maxFollowUps: number;
   followUpTemplateIds: string[];
-  defaultTemplateId: string;
   
   // Smart sending preferences
   avoidHolidays: boolean;
@@ -140,6 +137,11 @@ export interface EmailSettings {
   // Notification preferences
   emailNotifications: boolean;
   notificationEmail: string;
+
+  // Default resume to attach to follow-up emails
+  defaultResumeData?: string; // base64 data URL
+  defaultResumeName?: string;
+  attachResumeToFollowUps?: boolean; // whether to always attach resume
 }
 
 export interface ScheduledEmail {
@@ -235,14 +237,12 @@ export interface UserData {
   trash: TrashItem[];
   ignoredTargetSuggestions: string[];
   knownCompanies: string[];
-  knownSources: string[];
   customFields: {
     applications: CustomField[];
     coldEmails: CustomField[];
     linkedInOutreach: CustomField[];
   };
   emailSettings?: EmailSettings;
-  emailTemplates: EmailTemplate[];
   scheduledEmails: ScheduledEmail[];
 }
 
@@ -259,13 +259,11 @@ const EMPTY_DATA: UserData = {
   trash: [],
   ignoredTargetSuggestions: [],
   knownCompanies: [],
-  knownSources: [],
   customFields: {
     applications: [],
     coldEmails: [],
     linkedInOutreach: [],
   },
-  emailTemplates: emailScheduler.getDefaultTemplates(),
   scheduledEmails: [],
 };
 
@@ -286,7 +284,6 @@ function normalizeData(raw: any): UserData {
       workingHoursEnd: raw.emailSettings.workingHoursEnd || '17:00',
       maxFollowUps: raw.emailSettings.maxFollowUps || 3,
       followUpTemplateIds: raw.emailSettings.followUpTemplateIds || ['follow-up-1'],
-      defaultTemplateId: raw.emailSettings.defaultTemplateId || 'follow-up-1',
       avoidHolidays: raw.emailSettings.avoidHolidays || true,
       delayBetweenEmails: raw.emailSettings.delayBetweenEmails || 30,
       randomizeTiming: raw.emailSettings.randomizeTiming || true,
@@ -294,14 +291,14 @@ function normalizeData(raw: any): UserData {
       trackClicks: raw.emailSettings.trackClicks || false,
       emailNotifications: raw.emailSettings.emailNotifications || true,
       notificationEmail: raw.emailSettings.notificationEmail || raw.emailSettings.email,
+      attachResumeToFollowUps: raw.emailSettings.attachResumeToFollowUps ?? false,
+      defaultResumeData: raw.emailSettings.defaultResumeData,
+      defaultResumeName: raw.emailSettings.defaultResumeName,
     };
   }
   
   if (!raw.scheduledEmails) {
     raw.scheduledEmails = [];
-  }
-  if (!raw.emailTemplates || raw.emailTemplates.length === 0) {
-    raw.emailTemplates = emailScheduler.getDefaultTemplates();
   }
   raw.applications = raw.applications?.map((a: any) => ({ ...a, customFields: a.customFields || {} })) || [];
   raw.coldEmails = raw.coldEmails?.map((e: any) => ({ ...e, customFields: e.customFields || {} })) || [];
@@ -323,7 +320,6 @@ function normalizeData(raw: any): UserData {
   });
   raw.ignoredTargetSuggestions = raw.ignoredTargetSuggestions || [];
   raw.knownCompanies = raw.knownCompanies || [];
-  raw.knownSources = raw.knownSources || [];
   raw.trash = (raw.trash || []).filter((t: any) => {
     const deletedAt = new Date(t.deletedAt).getTime();
     const sevenDays = 7 * 24 * 60 * 60 * 1000;

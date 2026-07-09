@@ -169,9 +169,12 @@ export class GmailService {
     to: string,
     subject: string,
     body: string,
-    accessToken: string
+    accessToken: string,
+    attachment?: { name: string; data: string } // data is a base64 data URL (e.g. "data:application/pdf;base64,...")
   ): Promise<string> {
-    const emailData = this.createEmailMessage(to, subject, body);
+    const emailData = attachment
+      ? this.createEmailMessageWithAttachment(to, subject, body, attachment)
+      : this.createEmailMessage(to, subject, body);
 
     const response = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/send', {
       method: 'POST',
@@ -191,7 +194,7 @@ export class GmailService {
     return data.id as string;
   }
 
-  // Create RFC 2822 formatted email message (base64url encoded)
+  // Create RFC 2822 formatted plain-text email message (base64url encoded)
   private createEmailMessage(to: string, subject: string, body: string): string {
     const email = [
       `To: ${to}`,
@@ -203,6 +206,54 @@ export class GmailService {
     ].join('\n');
 
     return btoa(unescape(encodeURIComponent(email)))
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_')
+      .replace(/=+$/, '');
+  }
+
+  // Create RFC 2822 multipart/mixed email with a file attachment (base64url encoded)
+  private createEmailMessageWithAttachment(
+    to: string,
+    subject: string,
+    body: string,
+    attachment: { name: string; data: string }
+  ): string {
+    const boundary = `boundary_${Date.now()}`;
+
+    // Extract mime type and raw base64 from data URL (e.g. "data:application/pdf;base64,JVBERi...")
+    let mimeType = 'application/octet-stream';
+    let base64Data = attachment.data;
+    const dataUrlMatch = attachment.data.match(/^data:([^;]+);base64,(.+)$/);
+    if (dataUrlMatch) {
+      mimeType = dataUrlMatch[1];
+      base64Data = dataUrlMatch[2];
+    }
+
+    const lines = [
+      `To: ${to}`,
+      `Subject: ${subject}`,
+      'MIME-Version: 1.0',
+      `Content-Type: multipart/mixed; boundary="${boundary}"`,
+      '',
+      `--${boundary}`,
+      'Content-Type: text/plain; charset=utf-8',
+      'Content-Transfer-Encoding: quoted-printable',
+      '',
+      body,
+      '',
+      `--${boundary}`,
+      `Content-Type: ${mimeType}; name="${attachment.name}"`,
+      'Content-Transfer-Encoding: base64',
+      `Content-Disposition: attachment; filename="${attachment.name}"`,
+      '',
+      // Wrap base64 at 76 chars per MIME spec
+      base64Data.replace(/(.{76})/g, '$1\n').trimEnd(),
+      '',
+      `--${boundary}--`,
+    ];
+
+    const raw = lines.join('\n');
+    return btoa(unescape(encodeURIComponent(raw)))
       .replace(/\+/g, '-')
       .replace(/\//g, '_')
       .replace(/=+$/, '');
