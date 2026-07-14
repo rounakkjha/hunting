@@ -94,6 +94,7 @@ export default function EmailSettingsComponent({
   const [activeTab, setActiveTab] = useState<'due' | 'scheduled' | 'templates' | 'settings'>('due');
   const [sendingTest, setSendingTest] = useState(false);
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
+  const [tokenRevoked, setTokenRevoked] = useState(false);
 
   const [templates, setTemplates] = useState<EmailTemplate[]>(emailTemplates);
   const [selectedTemplateId, setSelectedTemplateId] = useState(emailTemplates[0]?.id || DEFAULT_TEMPLATES[0].id);
@@ -245,6 +246,10 @@ export default function EmailSettingsComponent({
     }
   };
 
+  // Detect if an error message indicates the token has been revoked/expired by Google
+  const isRevocationError = (msg: string) =>
+    /revoked|expired|invalid.*token|token.*invalid|Token has been|unauthorized/i.test(msg);
+
   // ── Test email ────────────────────────────────────────────────────────────────
   const handleSendTestEmail = async () => {
     if (!emailSettings) return;
@@ -252,9 +257,15 @@ export default function EmailSettingsComponent({
     setTestResult(null);
     try {
       const result = await emailSender.sendTestEmail(emailSettings);
+      if (!result.success && result.error && isRevocationError(result.error)) {
+        setTokenRevoked(true);
+        return;
+      }
       setTestResult({ success: result.success, message: result.success ? 'Test email sent! Check your inbox.' : (result.error || 'Failed') });
     } catch (e) {
-      setTestResult({ success: false, message: e instanceof Error ? e.message : 'Unknown error' });
+      const msg = e instanceof Error ? e.message : 'Unknown error';
+      if (isRevocationError(msg)) { setTokenRevoked(true); return; }
+      setTestResult({ success: false, message: msg });
     } finally {
       setSendingTest(false);
       setTimeout(() => setTestResult(null), 5000);
@@ -453,6 +464,25 @@ export default function EmailSettingsComponent({
               <p className="text-xs text-muted-foreground mt-0.5">Connect your Gmail to enable automatic follow-ups</p>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Token revoked banner — shown when Google has revoked the refresh token */}
+      {tokenRevoked && emailSettings?.isConnected && (
+        <div className="flex items-center justify-between gap-3 px-4 py-3 rounded-xl border border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-950/30">
+          <div className="flex items-center gap-2 min-w-0">
+            <AlertCircle className="w-4 h-4 text-red-500 shrink-0" />
+            <div>
+              <p className="text-sm font-semibold text-red-700 dark:text-red-400">Gmail access expired</p>
+              <p className="text-xs text-red-600/80 dark:text-red-400/70">Your token was revoked by Google. Reconnect to resume sending.</p>
+            </div>
+          </div>
+          <button
+            onClick={() => { setTokenRevoked(false); handleStartSetup(); }}
+            className="shrink-0 px-3 py-1.5 text-xs font-semibold text-white bg-red-500 hover:bg-red-600 rounded-lg transition-all"
+          >
+            Reconnect
+          </button>
         </div>
       )}
 

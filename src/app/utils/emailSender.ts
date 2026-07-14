@@ -41,7 +41,8 @@ export class EmailSender {
     scheduledEmail: ScheduledEmail,
     emailSettings: EmailSettings,
     coldEmail: ColdEmail,
-    resumeOverride?: ResumeAttachment // optional: used when coldEmail has no resume but user set a default
+    resumeOverride?: ResumeAttachment, // optional: used when coldEmail has no resume but user set a default
+    onTokenRefreshed?: (accessToken: string, expiresAt: number) => void // persist refreshed token
   ): Promise<EmailSendResult> {
     // Prevent duplicate sends
     if (this.sendingInProgress.has(scheduledEmail.id)) {
@@ -67,8 +68,8 @@ export class EmailSender {
       if (emailSettings.refreshToken && gmailService.isTokenExpired(emailSettings.expiresAt ?? 0)) {
         const refreshed = await gmailService.refreshAccessToken(emailSettings.refreshToken);
         accessToken = refreshed.accessToken;
-        // Caller should persist the updated expiresAt — we can't mutate emailSettings here,
-        // but we carry the new token for this send operation.
+        // Persist the new token so the next call doesn't need to refresh again
+        onTokenRefreshed?.(refreshed.accessToken, refreshed.expiresAt);
       }
 
       // Add tracking pixels if enabled

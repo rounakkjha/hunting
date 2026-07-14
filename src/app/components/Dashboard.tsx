@@ -785,7 +785,14 @@ export default function Dashboard({ userData, setUserData, onLogout, currentUser
                   scheduledEntry,
                   userData.emailSettings,
                   coldEmail,
-                  resolvedResume
+                  resolvedResume,
+                  (accessToken, expiresAt) => {
+                    // Persist refreshed token so subsequent sends don't need to refresh again
+                    setUserData(prev => prev.emailSettings
+                      ? { ...prev, emailSettings: { ...prev.emailSettings, accessToken, expiresAt } }
+                      : prev
+                    );
+                  }
                 );
                 if (result.success) {
                   setUserData(prev => ({
@@ -1375,7 +1382,13 @@ export default function Dashboard({ userData, setUserData, onLogout, currentUser
                   scheduledEntry,
                   userData.emailSettings,
                   coldEmail,
-                  resumeOverride
+                  resumeOverride,
+                  (accessToken, expiresAt) => {
+                    setUserData(prev => prev.emailSettings
+                      ? { ...prev, emailSettings: { ...prev.emailSettings, accessToken, expiresAt } }
+                      : prev
+                    );
+                  }
                 );
                 if (result.success) {
                   setUserData(prev => ({
