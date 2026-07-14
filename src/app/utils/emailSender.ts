@@ -265,8 +265,9 @@ export class EmailSender {
 
     try {
       let accessToken = emailSettings.accessToken!;
-      if (emailSettings.refreshToken && this.isTokenExpired(emailSettings)) {
-        accessToken = await this.refreshAccessToken(emailSettings.refreshToken);
+      if (emailSettings.refreshToken && gmailService.isTokenExpired(emailSettings.expiresAt ?? 0)) {
+        const refreshed = await gmailService.refreshAccessToken(emailSettings.refreshToken);
+        accessToken = refreshed.accessToken;
       }
 
       const testSubject = 'Job Search Tracker - Test Email';
