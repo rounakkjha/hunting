@@ -18,7 +18,9 @@ function figmaAssetResolver() {
 
 export default defineConfig({
   server: {
-    host: true, // expose on all network interfaces so the app is reachable via any local IP
+    host: true,       // expose on all network interfaces
+    port: 5174,       // always use this port
+    strictPort: true, // fail instead of silently picking a different port
   },
   plugins: [
     figmaAssetResolver(),
