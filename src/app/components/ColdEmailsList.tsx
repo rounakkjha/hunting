@@ -1,7 +1,13 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { format, addDays, isAfter, isToday } from 'date-fns';
-import { Mail, Trash2, Reply, ChevronRight, ChevronDown, Send, MailCheck, AlertCircle, CheckCircle2, Search, X, Pencil, Clock, Loader2, Ban } from 'lucide-react';
+import { Mail, Trash2, Reply, ChevronRight, ChevronDown, Send, MailCheck, AlertCircle, CheckCircle2, Search, X, Pencil, Clock, Loader2, Ban, Paperclip, Upload } from 'lucide-react';
 import type { ColdEmail, ScheduledEmail, EmailSettings } from '../App';
+import { Skeleton } from './ui/skeleton';
+
+interface ResumeAttachment {
+  name: string;
+  data: string; // base64 data URL
+}
 
 interface ColdEmailsListProps {
   coldEmails: ColdEmail[];
@@ -12,11 +18,13 @@ interface ColdEmailsListProps {
   onToggleResponse: (id: string) => void;
   onToggleFollowUpDone?: (id: string) => void;
   onEdit?: (email: ColdEmail) => void;
-  onSendFollowUpNow?: (coldEmail: ColdEmail) => Promise<void>;
+  /** resumeOverride=undefined → use defaults, null → send with no attachment */
+  onSendFollowUpNow?: (coldEmail: ColdEmail, resumeOverride?: ResumeAttachment | null) => Promise<void>;
   onCancelScheduledFollowUp?: (scheduledEmailId: string) => void;
   onScheduleFollowUp?: (coldEmail: ColdEmail) => void;
   highlightedId?: string | null;
   groupByCompany?: boolean;
+  isLoading?: boolean;
 }
 
 const PAGE_SIZE = 10;
@@ -35,6 +43,7 @@ export default function ColdEmailsList({
   onScheduleFollowUp,
   highlightedId,
   groupByCompany = true,
+  isLoading,
 }: ColdEmailsListProps) {
   const [activeTab, setActiveTab] = useState<'all' | 'initial' | 'followup'>('all');
   const [showAll, setShowAll] = useState(false);
@@ -44,20 +53,49 @@ export default function ColdEmailsList({
   const [schedulingId, setSchedulingId] = useState<string | null>(null);
   const highlightRef = useRef<HTMLDivElement>(null);
 
+  // Resume-picker popover state
+  const [resumePopover, setResumePopover] = useState<{
+    coldEmail: ColdEmail;
+    // null = "no attachment"; undefined = use default resolution
+    resumeOverride: ResumeAttachment | null | undefined;
+  } | null>(null);
+  const resumeFileRef = useRef<HTMLInputElement>(null);
+
   // Get pending scheduled follow-up for a cold email (not yet sent, no error)
   const getScheduledEntry = (coldEmailId: string) =>
     scheduledEmails.find(s => s.coldEmailId === coldEmailId && !s.sent && !s.error);
 
-  const handleSendNow = async (e: React.MouseEvent, coldEmail: ColdEmail) => {
+  // Determine which resume would be sent for a given cold email (mirrors Dashboard logic)
+  const getEffectiveResume = (coldEmail: ColdEmail): ResumeAttachment | null => {
+    if (coldEmail.resumeData && coldEmail.resumeName)
+      return { name: coldEmail.resumeName, data: coldEmail.resumeData };
+    if (emailSettings?.attachResumeToFollowUps && emailSettings.defaultResumeData && emailSettings.defaultResumeName)
+      return { name: emailSettings.defaultResumeName, data: emailSettings.defaultResumeData };
+    return null;
+  };
+
+  // Open the resume-picker popover instead of sending immediately
+  const handleSendNowClick = (e: React.MouseEvent, coldEmail: ColdEmail) => {
     e.stopPropagation();
     if (!onSendFollowUpNow || sendingId) return;
+    setResumePopover({ coldEmail, resumeOverride: undefined });
+  };
+
+  // Confirm send from the popover
+  const handleConfirmSend = async () => {
+    if (!resumePopover || !onSendFollowUpNow) return;
+    const { coldEmail, resumeOverride } = resumePopover;
+    setResumePopover(null);
     setSendingId(coldEmail.id);
     try {
-      await onSendFollowUpNow(coldEmail);
+      await onSendFollowUpNow(coldEmail, resumeOverride);
     } finally {
       setSendingId(null);
     }
   };
+
+  // Legacy alias kept for backward compat with any other callers
+  const handleSendNow = handleSendNowClick;
 
   const handleCancel = (e: React.MouseEvent, scheduledId: string) => {
     e.stopPropagation();
@@ -86,6 +124,24 @@ export default function ColdEmailsList({
       }
     }
   }, [highlightedId, coldEmails]);
+
+  if (isLoading) return (
+    <div className="space-y-3">
+      {Array.from({ length: 5 }).map((_, i) => (
+        <div key={i} className="p-4 rounded-xl bg-muted/30 border border-border/40 space-y-2">
+          <div className="flex items-center justify-between">
+            <Skeleton className="h-4 w-1/3" />
+            <Skeleton className="h-6 w-20 rounded-full" />
+          </div>
+          <Skeleton className="h-3 w-1/2" />
+          <div className="flex gap-2 mt-1">
+            <Skeleton className="h-6 w-16 rounded-md" />
+            <Skeleton className="h-6 w-16 rounded-md" />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
 
   // Memoized filtered emails for performance
   const filteredEmails = useMemo(() => {
@@ -459,6 +515,94 @@ export default function ColdEmailsList({
           )}
         </div>
       </div>
+
+      {/* ── Resume picker modal — shown before confirming Send Now ── */}
+      {resumePopover && (() => {
+        const effective = resumePopover.resumeOverride !== undefined
+          ? resumePopover.resumeOverride
+          : getEffectiveResume(resumePopover.coldEmail);
+        return (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+            onClick={() => setResumePopover(null)}
+          >
+            <div
+              className="w-full max-w-sm bg-card border border-border rounded-2xl shadow-2xl p-5 space-y-4"
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-semibold text-foreground">Send Follow-up to {resumePopover.coldEmail.company}</h3>
+                <button onClick={() => setResumePopover(null)} className="p-1 rounded-lg hover:bg-muted/60 text-muted-foreground">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Resume attachment section */}
+              <div className="space-y-2">
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Resume attachment</p>
+                {effective ? (
+                  <div className="flex items-center gap-2 p-3 rounded-xl bg-muted/40 border border-border/60">
+                    <Paperclip className="w-4 h-4 text-primary shrink-0" />
+                    <span className="text-sm text-foreground truncate flex-1">{effective.name}</span>
+                    <button
+                      onClick={() => setResumePopover(p => p ? { ...p, resumeOverride: null } : null)}
+                      className="text-[11px] text-red-400 hover:text-red-500 shrink-0"
+                    >Remove</button>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2 p-3 rounded-xl bg-muted/30 border border-dashed border-border/60 text-muted-foreground text-sm">
+                    <Paperclip className="w-4 h-4 shrink-0" />
+                    <span className="flex-1">No resume attached</span>
+                  </div>
+                )}
+
+                {/* Upload a different resume */}
+                <button
+                  onClick={() => resumeFileRef.current?.click()}
+                  className="flex items-center gap-1.5 text-xs text-primary hover:underline"
+                >
+                  <Upload className="w-3 h-3" />
+                  {effective ? 'Change resume' : 'Attach a resume'}
+                </button>
+                <input
+                  ref={resumeFileRef}
+                  type="file"
+                  accept=".pdf,.doc,.docx"
+                  className="hidden"
+                  onChange={e => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    const reader = new FileReader();
+                    reader.onload = ev => {
+                      const data = ev.target?.result as string;
+                      setResumePopover(p => p ? { ...p, resumeOverride: { name: file.name, data } } : null);
+                    };
+                    reader.readAsDataURL(file);
+                    e.target.value = '';
+                  }}
+                />
+              </div>
+
+              {/* Actions */}
+              <div className="flex gap-2 pt-1">
+                <button
+                  onClick={() => setResumePopover(null)}
+                  className="flex-1 px-4 py-2 rounded-xl border border-border text-sm text-foreground hover:bg-muted/40 transition-all"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleConfirmSend}
+                  className="flex-[2] flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl bg-primary text-white text-sm font-semibold hover:bg-primary/90 transition-all"
+                >
+                  <Send className="w-3.5 h-3.5" />
+                  Send Now
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }

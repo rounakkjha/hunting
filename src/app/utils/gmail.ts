@@ -36,7 +36,7 @@ export class GmailService {
   }
 
   // High-level authenticate method — opens popup OAuth flow
-  async authenticate(): Promise<{ success: boolean; email?: string; accessToken?: string; refreshToken?: string; error?: string }> {
+  async authenticate(): Promise<{ success: boolean; email?: string; accessToken?: string; refreshToken?: string; expiresAt?: number; error?: string }> {
     if (!GMAIL_CLIENT_ID) {
       return {
         success: false,
@@ -50,6 +50,7 @@ export class GmailService {
         email: result.email,
         accessToken: result.accessToken,
         refreshToken: result.refreshToken,
+        expiresAt: result.expiresAt,
       };
     } catch (error) {
       return {
@@ -144,7 +145,8 @@ export class GmailService {
   }
 
   // Refresh access token via Supabase Edge Function
-  async refreshAccessToken(refreshToken: string): Promise<string> {
+  // Returns the new access token and its expiry timestamp (ms since epoch)
+  async refreshAccessToken(refreshToken: string): Promise<{ accessToken: string; expiresAt: number }> {
     const response = await fetch(GMAIL_OAUTH_FUNCTION_URL, {
       method: 'POST',
       headers: {
@@ -161,7 +163,9 @@ export class GmailService {
     }
 
     const data = await response.json();
-    return data.accessToken;
+    // expiresAt may come from the edge function; fall back to 55-minute window
+    const expiresAt: number = data.expiresAt ?? (Date.now() + 55 * 60 * 1000);
+    return { accessToken: data.accessToken, expiresAt };
   }
 
   // Send email using Gmail API — returns the Gmail message ID

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { format } from 'date-fns';
 import { CheckSquare, Plus, Trash2, Sparkles, Flag, Pencil, Check, X, FastForward, Calendar } from 'lucide-react';
 import type { Todo, TodoPriority } from '../App';
+import { Skeleton } from './ui/skeleton';
 
 interface TodoListProps {
   todos: Todo[];
@@ -12,6 +13,7 @@ interface TodoListProps {
   onEdit: (id: string, text: string) => void;
   onUpdateDate?: (id: string, date: string) => void;
   onToggleCarryForward?: (id: string) => void;
+  isLoading?: boolean;
 }
 
 const PRIORITY_CONFIG: Record<TodoPriority, { label: string; color: string; bg: string; border: string; ring: string }> = {
@@ -22,12 +24,24 @@ const PRIORITY_CONFIG: Record<TodoPriority, { label: string; color: string; bg: 
 
 const PRIORITY_ORDER: TodoPriority[] = ['high', 'medium', 'low'];
 
-export default function TodoList({ todos, onAdd, onToggle, onDelete, onUpdatePriority, onEdit, onUpdateDate, onToggleCarryForward }: TodoListProps) {
+export default function TodoList({ todos, onAdd, onToggle, onDelete, onUpdatePriority, onEdit, onUpdateDate, onToggleCarryForward, isLoading }: TodoListProps) {
   const [newTodo, setNewTodo] = useState('');
   const [newPriority, setNewPriority] = useState<TodoPriority>('medium');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editText, setEditText] = useState('');
   const [editingDateId, setEditingDateId] = useState<string | null>(null);
+
+  if (isLoading) return (
+    <div className="space-y-2">
+      {Array.from({ length: 6 }).map((_, i) => (
+        <div key={i} className="flex items-center gap-3 p-3 rounded-lg bg-muted/30 border border-border/40">
+          <Skeleton className="w-5 h-5 rounded shrink-0" />
+          <Skeleton className="h-4 flex-1" />
+          <Skeleton className="h-5 w-14 rounded-full" />
+        </div>
+      ))}
+    </div>
+  );
 
   const today = format(new Date(), 'yyyy-MM-dd');
 

@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect, useRef } from 'react';
 import { format } from 'date-fns';
 import { FileText, Trash2, Briefcase, ChevronRight, Mail, MailCheck, Tag, Users, Download, ExternalLink, Hash, Search, X, Filter, Pencil, XCircle, Zap, RotateCcw } from 'lucide-react';
 import type { JobApplication } from '../App';
+import { Skeleton } from './ui/skeleton';
 
 function SourceBadge({ source }: { source: string }) {
   const s = source.toLowerCase();
@@ -48,13 +49,14 @@ interface ApplicationsListProps {
   onUpdateStatus?: (id: string, isActive: boolean, isRejected: boolean) => void;
   onEdit?: (app: JobApplication) => void;
   highlightedId?: string | null;
+  isLoading?: boolean;
 }
 
 const PAGE_SIZE = 10;
 
 const TAG_CYCLE = ['', 'need_to_mail', 'already_mailed', 'ghost'];
 
-export default function ApplicationsList({ applications, onDelete, onViewDetails, onUpdateTag, onUpdateStatus, onEdit, highlightedId }: ApplicationsListProps) {
+export default function ApplicationsList({ applications, onDelete, onViewDetails, onUpdateTag, onUpdateStatus, onEdit, highlightedId, isLoading }: ApplicationsListProps) {
   const [showAll, setShowAll] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const highlightRef = useRef<HTMLDivElement>(null);
@@ -100,6 +102,24 @@ export default function ApplicationsList({ applications, onDelete, onViewDetails
   }, [applications, searchQuery, sourceFilter, statusFilter]);
   
   const displayApplications = showAll ? filteredApplications : filteredApplications.slice(0, PAGE_SIZE);
+
+  if (isLoading) return (
+    <div className="space-y-3">
+      {Array.from({ length: 5 }).map((_, i) => (
+        <div key={i} className="flex items-center gap-3 p-4 rounded-xl bg-muted/30 border border-border/40">
+          <Skeleton className="w-1 h-12 rounded-full shrink-0" />
+          <div className="flex-1 space-y-2">
+            <Skeleton className="h-4 w-1/3" />
+            <Skeleton className="h-3 w-1/2" />
+          </div>
+          <div className="flex gap-2">
+            <Skeleton className="h-6 w-16 rounded-full" />
+            <Skeleton className="h-6 w-16 rounded-full" />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
 
   return (
     <div className="relative group">

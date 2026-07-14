@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { format } from 'date-fns';
 import { MessageSquare, Trash2, ChevronRight, Users, MailCheck, GraduationCap, Search, X, Pencil } from 'lucide-react';
 import type { LinkedInOutreach } from '../App';
+import { Skeleton } from './ui/skeleton';
 
 interface LinkedInOutreachListProps {
   outreach: LinkedInOutreach[];
@@ -10,11 +11,12 @@ interface LinkedInOutreachListProps {
   onToggleResponse?: (id: string) => void;
   onToggleAlumni?: (id: string) => void;
   onEdit?: (item: LinkedInOutreach) => void;
+  isLoading?: boolean;
 }
 
 const PAGE_SIZE = 10;
 
-export default function LinkedInOutreachList({ outreach, onDelete, onViewDetails, onToggleResponse, onToggleAlumni, onEdit }: LinkedInOutreachListProps) {
+export default function LinkedInOutreachList({ outreach, onDelete, onViewDetails, onToggleResponse, onToggleAlumni, onEdit, isLoading }: LinkedInOutreachListProps) {
   const [showAll, setShowAll] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState<'all' | 'alumni' | 'replied' | 'noReply'>('all');
@@ -42,6 +44,21 @@ export default function LinkedInOutreachList({ outreach, onDelete, onViewDetails
   });
 
   const displayOutreach = showAll ? tabFilteredOutreach : tabFilteredOutreach.slice(0, PAGE_SIZE);
+
+  if (isLoading) return (
+    <div className="space-y-3">
+      {Array.from({ length: 5 }).map((_, i) => (
+        <div key={i} className="flex items-center gap-3 p-4 rounded-xl bg-muted/30 border border-border/40">
+          <Skeleton className="w-9 h-9 rounded-full shrink-0" />
+          <div className="flex-1 space-y-2">
+            <Skeleton className="h-4 w-1/3" />
+            <Skeleton className="h-3 w-1/4" />
+          </div>
+          <Skeleton className="h-6 w-20 rounded-full" />
+        </div>
+      ))}
+    </div>
+  );
 
   return (
     <div className="relative group">

@@ -22,12 +22,17 @@ export class EmailScheduler {
   }
 
   // Start the scheduler
-  start(emailSettings: EmailSettings, scheduledEmails: ScheduledEmail[], onUpdate: (emails: ScheduledEmail[]) => void) {
+  start(
+    emailSettings: EmailSettings,
+    scheduledEmails: ScheduledEmail[],
+    coldEmails: ColdEmail[],
+    onUpdate: (emails: ScheduledEmail[]) => void
+  ) {
     this.stop(); // Clear any existing interval
     
     // Check every minute for scheduled emails
     this.intervalId = setInterval(() => {
-      this.checkAndSendScheduledEmails(emailSettings, scheduledEmails, onUpdate);
+      this.checkAndSendScheduledEmails(emailSettings, scheduledEmails, coldEmails, onUpdate);
     }, 60000); // 1 minute
   }
 
@@ -148,6 +153,7 @@ export class EmailScheduler {
   private async checkAndSendScheduledEmails(
     emailSettings: EmailSettings,
     scheduledEmails: ScheduledEmail[],
+    coldEmails: ColdEmail[],
     onUpdate: (emails: ScheduledEmail[]) => void
   ) {
     if (!emailSettings.isConnected || !emailSettings.autoSendEnabled) {
@@ -166,7 +172,7 @@ export class EmailScheduler {
 
     for (const scheduledEmail of dueEmails) {
       try {
-        await this.sendScheduledEmail(scheduledEmail, emailSettings);
+        await this.sendScheduledEmail(scheduledEmail, emailSettings, coldEmails);
         
         // Update the email as sent
         const updatedEmails = scheduledEmails.map(email =>
@@ -192,7 +198,11 @@ export class EmailScheduler {
   }
 
   // Send a scheduled email
-  private async sendScheduledEmail(scheduledEmail: ScheduledEmail, emailSettings: EmailSettings) {
+  private async sendScheduledEmail(
+    scheduledEmail: ScheduledEmail,
+    emailSettings: EmailSettings,
+    coldEmails: ColdEmail[]
+  ) {
     // Parse the template to get recipient and content
     const template = this.parseTemplate(scheduledEmail.template);
     
@@ -200,14 +210,24 @@ export class EmailScheduler {
       throw new Error('Invalid email template');
     }
 
-    // Check if access token needs refresh
+    // Check if access token needs refresh using the stored expiry timestamp
     let accessToken = emailSettings.accessToken!;
-    if (emailSettings.refreshToken && gmailService.isTokenExpired(Date.now())) {
-      accessToken = await gmailService.refreshAccessToken(emailSettings.refreshToken);
+    if (emailSettings.refreshToken && gmailService.isTokenExpired(emailSettings.expiresAt ?? 0)) {
+      const refreshed = await gmailService.refreshAccessToken(emailSettings.refreshToken);
+      accessToken = refreshed.accessToken;
     }
 
+    // Resolve resume attachment: per-email resume → default from settings → none
+    const coldEmail = coldEmails.find(e => e.id === scheduledEmail.coldEmailId);
+    const attachment: { name: string; data: string } | undefined =
+      (coldEmail?.resumeData && coldEmail.resumeName)
+        ? { name: coldEmail.resumeName, data: coldEmail.resumeData }
+        : (emailSettings.attachResumeToFollowUps && emailSettings.defaultResumeData && emailSettings.defaultResumeName)
+          ? { name: emailSettings.defaultResumeName, data: emailSettings.defaultResumeData }
+          : undefined;
+
     // Send the email
-    await gmailService.sendEmail(template.to, template.subject, template.body, accessToken);
+    await gmailService.sendEmail(template.to, template.subject, template.body, accessToken, attachment);
   }
 
   // Generate follow-up email template

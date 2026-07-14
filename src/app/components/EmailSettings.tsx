@@ -154,6 +154,7 @@ export default function EmailSettingsComponent({
           fromName: setupForm.fromName.trim(),
           accessToken: result.accessToken,
           refreshToken: result.refreshToken,
+          expiresAt: result.expiresAt,
           isConnected: true,
           autoSendEnabled: setupForm.autoSendEnabled,
           followUpDelay: setupForm.followUpDelay,

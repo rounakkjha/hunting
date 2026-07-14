@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { format } from 'date-fns';
 import { Briefcase, Plus, Trash2, Building2, Calendar, Clock, CheckCircle, XCircle, AlertCircle, DollarSign, FileText, ChevronDown, ChevronUp } from 'lucide-react';
 import type { Interview, InterviewRoundStatus, InterviewStatus } from '../App';
+import { Skeleton } from './ui/skeleton';
 
 interface InterviewListProps {
   interviews: Interview[];
@@ -11,6 +12,7 @@ interface InterviewListProps {
   onDelete: (id: string) => void;
   onUpdateRound: (interviewId: string, roundId: string, updates: Partial<{ status: InterviewRoundStatus; date: string; notes: string }>) => void;
   onUpdateStatus: (id: string, status: InterviewStatus) => void;
+  isLoading?: boolean;
 }
 
 const STATUS_CONFIG: Record<InterviewStatus, { label: string; color: string; bg: string; border: string; icon: any }> = {
@@ -28,7 +30,7 @@ const ROUND_STATUS_CONFIG: Record<InterviewRoundStatus, { label: string; color: 
   scheduled: { label: 'Scheduled', color: 'text-blue-500', bg: 'bg-blue-500/10', border: 'border-blue-500/30' },
 };
 
-export default function InterviewList({ interviews, onAdd, onOpenAddModal, onEdit, onDelete, onUpdateRound, onUpdateStatus }: InterviewListProps) {
+export default function InterviewList({ interviews, onAdd, onOpenAddModal, onEdit, onDelete, onUpdateRound, onUpdateStatus, isLoading }: InterviewListProps) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   // Memoized interview filtering for performance
@@ -265,6 +267,25 @@ export default function InterviewList({ interviews, onAdd, onOpenAddModal, onEdi
       </div>
     );
   };
+
+  if (isLoading) return (
+    <div className="space-y-3">
+      {Array.from({ length: 4 }).map((_, i) => (
+        <div key={i} className="p-4 rounded-xl bg-muted/30 border border-border/40 space-y-2">
+          <div className="flex items-center justify-between">
+            <Skeleton className="h-4 w-1/3" />
+            <Skeleton className="h-6 w-20 rounded-full" />
+          </div>
+          <Skeleton className="h-3 w-1/4" />
+          <div className="flex gap-2 mt-2">
+            <Skeleton className="h-6 w-16 rounded-full" />
+            <Skeleton className="h-6 w-16 rounded-full" />
+            <Skeleton className="h-6 w-16 rounded-full" />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
 
   return (
     <div className="relative group">

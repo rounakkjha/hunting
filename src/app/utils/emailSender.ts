@@ -64,8 +64,11 @@ export class EmailSender {
 
       // Check if we need to refresh the access token
       let accessToken = emailSettings.accessToken!;
-      if (emailSettings.refreshToken && this.isTokenExpired(emailSettings)) {
-        accessToken = await this.refreshAccessToken(emailSettings.refreshToken);
+      if (emailSettings.refreshToken && gmailService.isTokenExpired(emailSettings.expiresAt ?? 0)) {
+        const refreshed = await gmailService.refreshAccessToken(emailSettings.refreshToken);
+        accessToken = refreshed.accessToken;
+        // Caller should persist the updated expiresAt — we can't mutate emailSettings here,
+        // but we carry the new token for this send operation.
       }
 
       // Add tracking pixels if enabled
@@ -183,22 +186,6 @@ export class EmailSender {
     }
 
     return finalBody;
-  }
-
-  // Check if access token is expired
-  private isTokenExpired(emailSettings: EmailSettings): boolean {
-    // For now, we'll assume tokens expire after 1 hour
-    // In a real implementation, this would check the actual expiry time
-    return gmailService.isTokenExpired(Date.now());
-  }
-
-  // Refresh access token
-  private async refreshAccessToken(refreshToken: string): Promise<string> {
-    try {
-      return await gmailService.refreshAccessToken(refreshToken);
-    } catch (error) {
-      throw new Error('Failed to refresh access token');
-    }
   }
 
   // Log email events for analytics

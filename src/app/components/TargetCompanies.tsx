@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import type { TargetCompany, CompanyContact, ReferralStatus } from '../App';
 import CompanyAutocomplete from './CompanyAutocomplete';
+import { Skeleton } from './ui/skeleton';
 
 interface TargetCompaniesProps {
   companies: TargetCompany[];
@@ -33,6 +34,7 @@ interface TargetCompaniesProps {
   onUpdateContact: (companyId: string, contactId: string, updates: Partial<CompanyContact>) => void;
   onUpdateCompany: (companyId: string, updates: Partial<TargetCompany>) => void;
   onUpdateNotes: (companyId: string, notes: string) => void;
+  isLoading?: boolean;
 }
 
 const REFERRAL_STATUS_LABELS: Record<ReferralStatus, string> = {
@@ -56,6 +58,7 @@ export default function TargetCompanies({
   onUpdateContact,
   onUpdateCompany,
   onUpdateNotes,
+  isLoading,
 }: TargetCompaniesProps) {
   const [newCompany, setNewCompany] = useState('');
   const [newRole, setNewRole] = useState('');
@@ -78,6 +81,21 @@ export default function TargetCompanies({
   const [referralFilter, setReferralFilter] = useState<ReferralStatus | 'no_filter' | 'all_referral' | 'no_referral'>('no_filter');
   const [showDuplicateWarning, setShowDuplicateWarning] = useState(false);
   const [pendingCompany, setPendingCompany] = useState<{ company: string; role?: string; date: string; jobUrl?: string; referralStatus?: ReferralStatus } | null>(null);
+
+  if (isLoading) return (
+    <div className="space-y-3">
+      {Array.from({ length: 4 }).map((_, i) => (
+        <div key={i} className="p-4 rounded-xl bg-muted/30 border border-border/40 space-y-2">
+          <div className="flex items-center justify-between">
+            <Skeleton className="h-5 w-1/3" />
+            <Skeleton className="h-6 w-24 rounded-full" />
+          </div>
+          <Skeleton className="h-3 w-1/2" />
+          <Skeleton className="h-3 w-1/4" />
+        </div>
+      ))}
+    </div>
+  );
 
   const filteredCompanies = companies.filter(c => {
     const query = searchQuery.toLowerCase();

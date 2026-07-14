@@ -17,6 +17,9 @@ function figmaAssetResolver() {
 }
 
 export default defineConfig({
+  server: {
+    host: true, // expose on all network interfaces so the app is reachable via any local IP
+  },
   plugins: [
     figmaAssetResolver(),
     // The React and Tailwind plugins are both required for Make, even if

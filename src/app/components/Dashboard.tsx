@@ -181,6 +181,7 @@ export default function Dashboard({ userData, setUserData, onLogout, currentUser
       emailScheduler.start(
         userData.emailSettings,
         userData.scheduledEmails,
+        userData.coldEmails,
         (updatedEmails) => {
           setUserData((prev) => ({ ...prev, scheduledEmails: updatedEmails }));
         }
@@ -583,6 +584,7 @@ export default function Dashboard({ userData, setUserData, onLogout, currentUser
 
             <DateFilter dateRange={dateRange} onDateRangeChange={setDateRange} />
             <ApplicationsList
+              isLoading={isLoading}
               applications={filteredData.applications.filter((a) => !a.isQuickApply)}
               onDelete={(id) => {
                 const app = userData.applications.find((a) => a.id === id);
@@ -721,6 +723,7 @@ export default function Dashboard({ userData, setUserData, onLogout, currentUser
             </div>
             <DateFilter dateRange={dateRange} onDateRangeChange={setDateRange} />
             <ColdEmailsList
+              isLoading={isLoading}
               coldEmails={filteredData.coldEmails}
               scheduledEmails={userData.scheduledEmails}
               emailSettings={userData.emailSettings}
@@ -749,7 +752,7 @@ export default function Dashboard({ userData, setUserData, onLogout, currentUser
                 setEditingEntry(email);
                 setActiveModal('coldEmail');
               }}
-              onSendFollowUpNow={async (coldEmail) => {
+              onSendFollowUpNow={async (coldEmail, resumeFromPicker) => {
                 if (!userData.emailSettings?.isConnected) return;
                 const existing = userData.scheduledEmails.find(
                   s => s.coldEmailId === coldEmail.id && !s.sent && !s.error
@@ -767,17 +770,22 @@ export default function Dashboard({ userData, setUserData, onLogout, currentUser
                   sent: false,
                   createdAt: new Date().toISOString(),
                 };
-                const resumeOverride =
-                  userData.emailSettings.attachResumeToFollowUps &&
-                  userData.emailSettings.defaultResumeData &&
-                  userData.emailSettings.defaultResumeName
-                    ? { name: userData.emailSettings.defaultResumeName, data: userData.emailSettings.defaultResumeData }
-                    : undefined;
+                // resumeFromPicker=undefined → use defaults; null → no attachment; object → use that file
+                const resolvedResume: { name: string; data: string } | undefined =
+                  resumeFromPicker === null
+                    ? undefined // explicitly stripped
+                    : resumeFromPicker !== undefined
+                    ? resumeFromPicker // user picked a specific file in the popover
+                    : (userData.emailSettings.attachResumeToFollowUps &&
+                       userData.emailSettings.defaultResumeData &&
+                       userData.emailSettings.defaultResumeName)
+                      ? { name: userData.emailSettings.defaultResumeName, data: userData.emailSettings.defaultResumeData }
+                      : undefined;
                 const result = await emailSender.sendScheduledEmail(
                   scheduledEntry,
                   userData.emailSettings,
                   coldEmail,
-                  resumeOverride
+                  resolvedResume
                 );
                 if (result.success) {
                   setUserData(prev => ({
@@ -832,6 +840,7 @@ export default function Dashboard({ userData, setUserData, onLogout, currentUser
             </div>
             <DateFilter dateRange={dateRange} onDateRangeChange={setDateRange} />
             <LinkedInOutreachList
+              isLoading={isLoading}
               outreach={filteredData.linkedInOutreach}
               onDelete={(id) => {
                 const item = userData.linkedInOutreach.find((o) => o.id === id);
@@ -868,6 +877,7 @@ export default function Dashboard({ userData, setUserData, onLogout, currentUser
         return (
           <div className="space-y-6">
             <InterviewList
+              isLoading={isLoading}
               interviews={userData.interviews}
               onOpenAddModal={() => setActiveModal('interview')}
               onEdit={(interview) => {
@@ -970,6 +980,7 @@ export default function Dashboard({ userData, setUserData, onLogout, currentUser
           <div className="space-y-6">
             <h2 className="text-2xl sm:text-3xl font-bold">Target Companies</h2>
             <TargetCompanies
+              isLoading={isLoading}
               companies={userData.targetCompanies}
               onAdd={(company, role, date, jobUrl, referralStatus) => {
                 const newTargetId = Date.now().toString();
@@ -1134,6 +1145,7 @@ export default function Dashboard({ userData, setUserData, onLogout, currentUser
             <h2 className="text-2xl sm:text-3xl font-bold">To-Do List</h2>
             <DateFilter dateRange={dateRange} onDateRangeChange={setDateRange} />
             <TodoList
+              isLoading={isLoading}
               todos={filteredData.todos}
               onAdd={(text, priority) => {
                 setUserData((prev) => ({

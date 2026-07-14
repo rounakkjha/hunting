@@ -108,6 +108,7 @@ export interface EmailSettings {
   fromName: string;
   accessToken?: string;
   refreshToken?: string;
+  expiresAt?: number; // Unix timestamp (ms) when the access token expires
   isConnected: boolean;
   autoSendEnabled: boolean;
   followUpDelay: number; // days
